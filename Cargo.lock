@@ -423,6 +423,7 @@ dependencies = [
  "serde",
  "tungstenite",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

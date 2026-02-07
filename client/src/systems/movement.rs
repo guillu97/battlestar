@@ -1,4 +1,4 @@
-use crate::components::{Player, Thruster, ThrusterOwner, Velocity};
+use crate::components::{Player, Thruster, ThrusterOwner, Velocity, Joystick};
 use crate::constants::{ANGULAR_SPEED, PLAYER_SPEED};
 use bevy::prelude::*;
 use std::f32::consts::PI;
@@ -7,9 +7,11 @@ pub fn move_player(
     mut player: Single<(&mut Transform, &mut Velocity), With<Player>>,
     time: Res<Time>,
     kb_input: Res<ButtonInput<KeyCode>>,
+    joystick_query: Query<&Joystick>,
 ) {
     let mut direction = Vec2::ZERO;
 
+    // Keyboard input
     if kb_input.pressed(KeyCode::KeyW) {
         direction.y += 1.0;
     }
@@ -24,6 +26,13 @@ pub fn move_player(
 
     if kb_input.pressed(KeyCode::KeyD) {
         direction.x += 1.0;
+    }
+
+    // Mobile joystick input
+    for joystick in joystick_query.iter() {
+        if joystick.input.length_squared() > 0.0 {
+            direction = joystick.input;
+        }
     }
 
     if direction.length_squared() > 0.0 {

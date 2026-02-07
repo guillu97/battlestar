@@ -31,6 +31,7 @@ fn build_app() -> App {
                 systems::setup::setup,
                 systems::setup::setup_instructions,
                 systems::camera::setup_camera,
+                systems::joystick::setup_joystick,
             ),
         )
         .add_systems(
@@ -39,6 +40,7 @@ fn build_app() -> App {
                 systems::movement::move_player,
                 systems::movement::update_thruster_length,
                 systems::camera::update_camera,
+                systems::joystick::update_joystick,
             ),
         );
     app
