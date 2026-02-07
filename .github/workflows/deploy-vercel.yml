@@ -1,0 +1,19 @@
+name: Deploy Frontend to Vercel
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { toolchain: stable, targets: wasm32-unknown-unknown }
+      - run: cargo install trunk
+      - working-directory: battlestar/client
+        run: trunk build --release
+      - uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}  # Ajoute ton token Vercel dans GitHub Secrets
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: battlestar/client/www
+          scope: ton-org-vercel
