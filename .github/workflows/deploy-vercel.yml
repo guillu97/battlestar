@@ -6,14 +6,13 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4   # ← upgrade à v4 (v3 est vieux)
+      - uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable   # ← plus moderne que actions-rs/toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: wasm32-unknown-unknown
@@ -21,20 +20,21 @@ jobs:
       - name: Install Trunk
         run: cargo install trunk --locked
 
-      - name: Build project
+      - name: Build WASM
         working-directory: ./client
         run: trunk build --release --public-url .
 
-      - name: Debug dist contents   # ← pour vérifier dans les logs
-        run: ls -la ./client/dist
+      - name: Debug dist
+        run: |
+          ls -la ./client/dist
+          echo "Index.html exists: $(test -f ./client/dist/index.html && echo yes || echo no)"
 
-      - name: Deploy to Vercel (Production)
-        uses: amondnet/vercel-action@v25   # ← ou @v41 si disponible, évite @master
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./client/dist
-          vercel-args: '--prod'   # sans --prebuilt
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
 
-          
+      - name: Deploy from dist/
+        working-directory: ./client/dist
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
