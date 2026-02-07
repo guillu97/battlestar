@@ -10,33 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4   # ← upgrade à v4 (v3 est vieux)
 
-      # Rust + wasm32 target
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable   # ← plus moderne que actions-rs/toolchain
         with:
           toolchain: stable
-          target: wasm32-unknown-unknown
-          profile: minimal
+          targets: wasm32-unknown-unknown
 
-      - name: Install Trunk & wasm-bindgen
-        run: |
-          cargo install trunk
-          cargo install wasm-bindgen-cli
+      - name: Install Trunk
+        run: cargo install trunk --locked
 
-      # Build Bevy WASM
       - name: Build project
         working-directory: ./client
-        run: |
-          trunk build --release --public-url .  # crée dist/
+        run: trunk build --release --public-url .
+
+      - name: Debug dist contents   # ← pour vérifier dans les logs
+        run: ls -la ./client/dist
 
       - name: Deploy to Vercel (Production)
-        uses: amondnet/vercel-action@master   # ← upgrade ici (ou @master si tu veux la toute dernière)
+        uses: amondnet/vercel-action@v25   # ← ou @v41 si disponible, évite @master
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./client/dist   # pointe vers le dossier généré par trunk
-          vercel-args: '--prod'   # --prebuilt car on a déjà buildé statique
-
+          working-directory: ./client/dist
+          vercel-args: '--prod'   # sans --prebuilt
