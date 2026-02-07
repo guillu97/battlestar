@@ -27,6 +27,7 @@ jobs:
 
       # Build Bevy WASM
       - name: Build project
+        working-directory: ./client
         run: |
           trunk build --release --public-url .  # crée dist/
 
@@ -39,4 +40,4 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./dist
           prod: true
-          
+
