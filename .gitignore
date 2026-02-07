@@ -1,4 +1,3 @@
 /target
 .env
 client/dist/*
-!client/dist/index.html
