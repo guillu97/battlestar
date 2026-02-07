@@ -31,13 +31,12 @@ jobs:
         run: |
           trunk build --release --public-url .  # crée dist/
 
-      # Deploy to Vercel
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v20
+      - name: Deploy to Vercel (Production)
+        uses: amondnet/vercel-action@master   # ← upgrade ici (ou @master si tu veux la toute dernière)
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./dist
-          prod: true
+          working-directory: ./client/dist   # pointe vers le dossier généré par trunk
+          vercel-args: '--prod --prebuilt'   # --prebuilt car on a déjà buildé statique
 
