@@ -80,9 +80,9 @@ fn build_thruster_mesh() -> Mesh {
 // ── Asteroid ───────────────────────────────────────────────────────────
 
 impl Asteroid {
-    pub fn spawn(commands: &mut Commands, position: Vec3) -> Entity {
+    pub fn spawn(commands: &mut Commands, position: Vec3, radius: f32) -> Entity {
         let asteroid_shape = shapes::Circle {
-            radius: 12.0,
+            radius,
             ..Default::default()
         };
 

@@ -7,19 +7,8 @@ edition = "2024"
 crate-type = ["cdylib"]          # Obligatoire pour wasm-bindgen / trunk
 
 [dependencies]
-bevy = { version = "0.18", default-features = false, features = [
-    "bevy_asset",
-    "bevy_winit",
-    "bevy_core_pipeline",
-    "bevy_render",
-    "bevy_sprite",
-    "bevy_text",
-    "bevy_ui",
-    "png",
-    "ktx2",
-    "webgl2",
-    "web",
-] }
+bevy = { version = "0.18", features = ["bevy_sprite", "png", "webgl2"] }
+bevy_asset = "0.18"
 
 bevy_prototype_lyon = "0.16"          # ← juste ça, sans features inutiles
 
@@ -28,6 +17,7 @@ bevy_rapier2d = "0.32" # support WASM important !
 serde = { workspace = true }
 
 tungstenite = "0.28"
+wasm-bindgen = "0.2.108"
 
 # Optionnel : pour des assets web (si tu charges des fichiers)
 # image = { version = "0.25", default-features = false, features = ["png"] }
@@ -35,5 +25,5 @@ tungstenite = "0.28"
 
 
 [build]
-dist = "www"
 target = "index.html"
+dist = "www"

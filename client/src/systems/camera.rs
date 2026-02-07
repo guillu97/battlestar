@@ -1,7 +1,6 @@
 use crate::components::Player;
 use crate::constants::CAMERA_DECAY_RATE;
-use bevy::post_process::bloom::Bloom;
-use bevy::prelude::*;
+use bevy::{post_process::bloom::Bloom, prelude::*};
 
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn((Camera2d, Bloom::NATURAL));

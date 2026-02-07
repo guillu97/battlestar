@@ -7,7 +7,7 @@ pub fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     Ship::spawn(&mut commands, &mut meshes, &mut materials, Vec3::ZERO);
-    Asteroid::spawn(&mut commands, Vec3::new(120.0, 80.0, 0.0));
+    Asteroid::spawn(&mut commands, Vec3::new(120.0, 80.0, 0.0), 20.0);
 }
 
 pub fn setup_instructions(mut commands: Commands) {

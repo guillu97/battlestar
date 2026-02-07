@@ -16,6 +16,7 @@ pub fn main() {
 
 fn build_app() -> App {
     let mut app = App::new();
+    
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 canvas: Some("#canvas".to_string()), // ou laisse default
@@ -23,7 +24,6 @@ fn build_app() -> App {
             }),
             ..default()
         }))
-    .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin)
         .add_systems(
             Startup,
