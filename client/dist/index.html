@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Battlestar</title>
+    <style>body { margin:0; overflow:hidden; background:#000; } canvas { display:block; }</style>
+<link rel="modulepreload" href="/battlestar-client-5b98a6c4b56db639.js" crossorigin="anonymous" integrity="sha384-J+0EOZdAoGERIManSO6WT67bEWjnOGZxhGGijTJggRXoYt0O82BSN9aM2JDBAi6r"><link rel="preload" href="/battlestar-client-5b98a6c4b56db639_bg.wasm" crossorigin="anonymous" integrity="sha384-o+tf7EtRLURA9Yva8f7IrB6DsP+z4qNJ7wTuBRY8wXuNMbGw2AfetiDPzaDp3FYD" as="fetch" type="application/wasm"></head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+        import init from "/battlestar-client.js";  // adapte au nom de ton .js
+        init("/battlestar-client.wasm");
+    </script>
+
+<script type="module">
+import init, * as bindings from '/battlestar-client-5b98a6c4b56db639.js';
+const wasm = await init({ module_or_path: '/battlestar-client-5b98a6c4b56db639_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
+</html>
