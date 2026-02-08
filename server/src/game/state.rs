@@ -1,6 +1,6 @@
 use super::physics::{distance, wrap_position};
 use super::types::{Asteroid, Color, Ship, Vec2};
-use rand::Rng;
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 
 // Physics constants
