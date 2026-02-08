@@ -12,6 +12,9 @@ pub struct Asteroid;
 #[derive(Component)]
 pub struct Player;
 
+#[derive(Component)]
+pub struct MapBoundary;
+
 // Velocity is read-only from server updates (no client-side physics)
 #[derive(Component, Default)]
 pub struct Velocity(pub Vec2);
@@ -55,6 +58,11 @@ pub struct JoystickKnobBundle {
 // Network-related structures matching server
 #[derive(Component)]
 pub struct NetworkedPlayer {
+	pub id: u32,
+}
+
+#[derive(Component)]
+pub struct NetworkedAsteroid {
 	pub id: u32,
 }
 

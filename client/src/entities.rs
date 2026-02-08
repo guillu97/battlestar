@@ -1,5 +1,5 @@
-use crate::components::{Asteroid, Player, Ship, Thruster, ThrusterOwner, Velocity};
-use bevy::color::palettes::css::{BLACK, DARK_CYAN, GRAY};
+use crate::components::{Asteroid, MapBoundary, Player, Ship, Thruster, ThrusterOwner, Velocity};
+use bevy::color::palettes::css::{BLACK, DARK_CYAN, GRAY, RED};
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy_asset::RenderAssetUsages;
@@ -94,6 +94,30 @@ impl Asteroid {
                     .build(),
                 Transform::from_translation(position),
                 Asteroid,
+            ))
+            .id();
+
+        entity
+    }
+}
+
+// ── Map Boundary ───────────────────────────────────────────────────────
+
+impl MapBoundary {
+    pub fn spawn(commands: &mut Commands) -> Entity {
+        let map_limit = 400.0;
+        let boundary_shape = shapes::Rectangle {
+            extents: Vec2::new(map_limit * 2.0, map_limit * 2.0),
+            ..Default::default()
+        };
+
+        let entity = commands
+            .spawn((
+                ShapeBuilder::with(&boundary_shape)
+                    .stroke(Stroke::new(RED, 3.0))
+                    .build(),
+                Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
+                MapBoundary,
             ))
             .id();
 

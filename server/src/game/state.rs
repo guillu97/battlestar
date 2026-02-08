@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 // Physics constants
 pub struct PhysicsConfig;
 impl PhysicsConfig {
-    pub const THRUST_ACCEL: f32 = 300.0;  // pixels/sec²
-    pub const ROTATION_SPEED: f32 = 4.0;   // radians/sec
-    pub const MAX_SPEED: f32 = 250.0;      // pixels/sec
+    pub const THRUST_ACCEL: f32 = 2000.0;  // pixels/sec²
+    pub const ROTATION_SPEED: f32 = 6.0;   // radians/sec
+    pub const MAX_SPEED: f32 = 1000.0;      // pixels/sec
     pub const DRAG: f32 = 0.98;            // velocity multiplier per frame
     pub const SHIP_RADIUS: f32 = 25.0;     // pixels
 }

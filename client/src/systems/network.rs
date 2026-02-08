@@ -1,4 +1,4 @@
-use crate::components::{ClientInput, ServerMessage, NetworkedPlayer, ServerColor};
+use crate::components::{ClientInput, ServerMessage, NetworkedPlayer, NetworkedAsteroid, ServerColor};
 use bevy::prelude::*;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::prelude::*;
@@ -175,6 +175,7 @@ pub fn receive_game_state(
     mut player_color: ResMut<PlayerColor>,
     mut existing_ships: Query<(Entity, &NetworkedPlayer, &mut Transform), Without<crate::components::Player>>,
     mut local_player: Query<(&mut Transform, &mut crate::components::Velocity), With<crate::components::Player>>,
+    mut existing_asteroids: Query<(Entity, &NetworkedAsteroid, &mut Transform), (Without<NetworkedPlayer>, Without<crate::components::Player>)>,
 ) {
     if !client.connected {
         return;
@@ -206,16 +207,25 @@ pub fn receive_game_state(
                 if server_ship.id == client.player_id {
                     player_color.color = Some(server_ship.color);
                     
-                    // Server is authoritative - interpolate smoothly to avoid visual rollbacks
                     if let Some((mut transform, mut velocity)) = local_player.iter_mut().next() {
-                        // Interpolate position for smooth movement (higher factor = faster convergence)
-                        let blend = 0.5; // 50% blend per frame at 60fps = smooth but responsive
-                        transform.translation.x += (server_ship.position.x - transform.translation.x) * blend;
-                        transform.translation.y += (server_ship.position.y - transform.translation.y) * blend;
+                        let server_pos = Vec2::new(server_ship.position.x, server_ship.position.y);
+                        let client_pos = transform.translation.truncate();
+                        let distance = server_pos.distance(client_pos);
+                        
+                        // If too far away, snap immediately to prevent teleporting feeling
+                        if distance > 50.0 {
+                            transform.translation.x = server_ship.position.x;
+                            transform.translation.y = server_ship.position.y;
+                        } else {
+                            // Smooth interpolation for small corrections
+                            let blend = 0.7;
+                            transform.translation.x += (server_ship.position.x - transform.translation.x) * blend;
+                            transform.translation.y += (server_ship.position.y - transform.translation.y) * blend;
+                        }
                         
                         // Interpolate rotation
                         let target_quat = Quat::from_rotation_z(server_ship.rotation);
-                        transform.rotation = transform.rotation.slerp(target_quat, blend);
+                        transform.rotation = transform.rotation.slerp(target_quat, 0.7);
                         
                         // Update velocity directly (used for thruster visuals)
                         velocity.0.x = server_ship.velocity.x;
@@ -254,6 +264,41 @@ pub fn receive_game_state(
                     // Remove ships that no longer exist
                     for (entity, networked, _) in existing_ships.iter() {
                         if !seen_ids.contains(&networked.id) {
+                            commands.entity(entity).despawn();
+                        }
+                    }
+
+                    // Update asteroids from server
+                    let mut seen_asteroid_ids = std::collections::HashSet::new();
+                    for server_asteroid in game_state.asteroids {
+                        seen_asteroid_ids.insert(server_asteroid.id);
+
+                        // Find or create asteroid entity
+                        let mut found = false;
+                        for (_entity, networked, mut transform) in existing_asteroids.iter_mut() {
+                            if networked.id == server_asteroid.id {
+                                // Update position with server authority
+                                transform.translation.x = server_asteroid.position.x;
+                                transform.translation.y = server_asteroid.position.y;
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if !found {
+                            // Spawn new networked asteroid
+                            spawn_networked_asteroid(
+                                &mut commands,
+                                server_asteroid.id,
+                                Vec3::new(server_asteroid.position.x, server_asteroid.position.y, 0.0),
+                                server_asteroid.radius,
+                            );
+                        }
+                    }
+
+                    // Remove asteroids that no longer exist
+                    for (entity, networked, _) in existing_asteroids.iter() {
+                        if !seen_asteroid_ids.contains(&networked.id) {
                             commands.entity(entity).despawn();
                         }
                     }
@@ -367,5 +412,29 @@ fn spawn_networked_ship(
             .build(),
         Transform::from_translation(position),
         NetworkedPlayer { id },
+    ));
+}
+
+fn spawn_networked_asteroid(
+    commands: &mut Commands,
+    id: u32,
+    position: Vec3,
+    radius: f32,
+) {
+    use bevy::color::palettes::css::{BLACK, GRAY};
+    use bevy_prototype_lyon::prelude::*;
+
+    let asteroid_shape = shapes::Circle {
+        radius,
+        ..Default::default()
+    };
+
+    commands.spawn((
+        ShapeBuilder::with(&asteroid_shape)
+            .fill(Fill::color(GRAY))
+            .stroke(Stroke::new(BLACK, 1.0f32))
+            .build(),
+        Transform::from_translation(position),
+        NetworkedAsteroid { id },
     ));
 }

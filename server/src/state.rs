@@ -38,7 +38,7 @@ impl AppState {
 
 fn spawn_game_loop(state: Arc<AppState>) {
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_millis(16));
+        let mut interval = tokio::time::interval(Duration::from_millis(50)); 
         let mut tick_counter = 0u32;
         
         loop {
@@ -50,7 +50,7 @@ fn spawn_game_loop(state: Arc<AppState>) {
                 buffer.drain(..).collect()
             };
             
-            let dt = 1.0 / 60.0;
+            let dt = 1.0 / 20.0; // Match tick rate
             let mut gs = state.game_state.lock().await;
             
             // Process all queued inputs for this tick
