@@ -1,29 +1,23 @@
 use axum::{
     extract::State,
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::IntoResponse,
     routing::get,
     Router,
-    web::WebSocket,
 };
-use axum::extract::ws::{Message, WebSocketUpgrade};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
-use supabase_rs::SupabaseClient;
 use tokio::sync::{broadcast, Mutex};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let supabase_url = std::env::var("SUPABASE_URL")?;
-    let supabase_key = std::env::var("SUPABASE_ANON_KEY")?;
-    let supabase = Arc::new(SupabaseClient::new(&supabase_url, &supabase_key));
-
     let (tx, _rx) = broadcast::channel(256);
     let game_state = Arc::new(Mutex::new(GameState::new()));
 
     let app_state = Arc::new(AppState {
         broadcaster: tx,
         game_state,
-        supabase,
     });
 
     spawn_game_loop(app_state.clone());
@@ -63,18 +57,20 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     loop {
         tokio::select! {
             maybe_msg = socket.recv() => {
-                let Some(Ok(Message::Text(text))) = maybe_msg else {
+                let Some(Ok(msg)) = maybe_msg else {
                     break;
                 };
 
-                if let Ok(input) = serde_json::from_str::<ClientInput>(&text) {
-                    let mut gs = state.game_state.lock().await;
-                    gs.apply_input(input);
+                if let Message::Text(text) = msg {
+                    if let Ok(input) = serde_json::from_str::<ClientInput>(&text) {
+                        let mut gs = state.game_state.lock().await;
+                        gs.apply_input(input);
+                    }
                 }
             }
             msg = rx.recv() => {
                 if let Ok(text) = msg {
-                    let _ = socket.send(Message::Text(text)).await;
+                    let _ = socket.send(Message::Text(text.into())).await;
                 }
             }
         }
@@ -84,7 +80,6 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
 struct AppState {
     broadcaster: broadcast::Sender<String>,
     game_state: Arc<Mutex<GameState>>,
-    supabase: Arc<SupabaseClient>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +102,14 @@ struct Ship {
     position: Vec2,
     velocity: Vec2,
     rotation: f32,
+    color: Color,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+struct Color {
+    r: f32,
+    g: f32,
+    b: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,19 +149,28 @@ impl GameState {
     }
 
     fn apply_input(&mut self, input: ClientInput) {
+        let ship_exists = self.ships.iter().any(|ship| ship.id == input.player_id);
+        
+        if !ship_exists {
+            let mut rng = rand::rng();
+            self.ships.push(Ship {
+                id: input.player_id,
+                position: Vec2 { x: 0.0, y: 0.0 },
+                velocity: Vec2 { x: 0.0, y: 0.0 },
+                rotation: 0.0,
+                color: Color {
+                    r: rng.random_range(0.3..1.0),
+                    g: rng.random_range(0.3..1.0),
+                    b: rng.random_range(0.3..1.0),
+                },
+            });
+        }
+        
         let ship = self
             .ships
             .iter_mut()
             .find(|ship| ship.id == input.player_id)
-            .unwrap_or_else(|| {
-                self.ships.push(Ship {
-                    id: input.player_id,
-                    position: Vec2 { x: 0.0, y: 0.0 },
-                    velocity: Vec2 { x: 0.0, y: 0.0 },
-                    rotation: 0.0,
-                });
-                self.ships.last_mut().expect("ship just pushed")
-            });
+            .expect("ship exists");
 
         ship.rotation += input.rotate;
         ship.velocity.x += input.thrust * ship.rotation.cos() * 0.1;

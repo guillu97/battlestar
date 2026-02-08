@@ -32,6 +32,7 @@ fn build_app() -> App {
                 systems::setup::setup_instructions,
                 systems::camera::setup_camera,
                 systems::joystick::setup_joystick,
+                systems::network::setup_network,
             ),
         )
         .add_systems(
@@ -42,7 +43,15 @@ fn build_app() -> App {
                 systems::camera::update_camera,
                 systems::joystick::update_joystick,
             ),
-        );
+        )
+        .add_systems(
+            Update,
+            (
+                systems::network::send_player_input,
+                systems::network::receive_game_state,
+            ),
+        )
+        .add_systems(Update, systems::network::update_local_ship_color);
     app
 }
 
