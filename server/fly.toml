@@ -1,5 +1,5 @@
 # Fly.io configuration for Battlestar server
-app = "battlestar-server"
+app = "battlestar"
 primary_region = "cdg"  # Paris - change to your preferred region
 
 [build]
