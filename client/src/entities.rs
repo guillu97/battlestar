@@ -52,7 +52,7 @@ impl Ship {
     }
 }
 
-fn build_thruster_mesh() -> Mesh {
+pub fn build_thruster_mesh() -> Mesh {
     let base_width = 8.0;
     let base_length = 12.0;
 

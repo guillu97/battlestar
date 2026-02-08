@@ -1,9 +1,15 @@
 use crate::components::Player;
 use crate::constants::CAMERA_DECAY_RATE;
-use bevy::{post_process::bloom::Bloom, prelude::*};
+use bevy::{prelude::*, color::palettes::css::*};
 
 pub fn setup_camera(mut commands: Commands) {
-    commands.spawn((Camera2d, Bloom::NATURAL));
+    commands.spawn((
+        Camera2d,
+        Camera {
+            clear_color: ClearColorConfig::Custom(DARK_GRAY.into()),
+            ..default()
+        },
+    ));
 }
 
 pub fn update_camera(
