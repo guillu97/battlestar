@@ -1,54 +1,8 @@
-use crate::components::{Player, Thruster, ThrusterOwner, Velocity, Joystick};
-use crate::constants::{ANGULAR_SPEED, PLAYER_SPEED};
+use crate::components::{Thruster, ThrusterOwner, Velocity};
 use bevy::prelude::*;
-use std::f32::consts::PI;
 
-pub fn move_player(
-    mut player: Single<(&mut Transform, &mut Velocity), With<Player>>,
-    time: Res<Time>,
-    kb_input: Res<ButtonInput<KeyCode>>,
-    joystick_query: Query<&Joystick>,
-) {
-    let mut direction = Vec2::ZERO;
-
-    // Keyboard input
-    if kb_input.pressed(KeyCode::KeyW) {
-        direction.y += 1.0;
-    }
-
-    if kb_input.pressed(KeyCode::KeyS) {
-        direction.y -= 1.0;
-    }
-
-    if kb_input.pressed(KeyCode::KeyA) {
-        direction.x -= 1.0;
-    }
-
-    if kb_input.pressed(KeyCode::KeyD) {
-        direction.x += 1.0;
-    }
-
-    // Mobile joystick input
-    for joystick in joystick_query.iter() {
-        if joystick.input.length_squared() > 0.0 {
-            direction = joystick.input;
-        }
-    }
-
-    if direction.length_squared() > 0.0 {
-        let target = direction.y.atan2(direction.x) - PI / 2.0;
-        let current = player.0.rotation.to_euler(EulerRot::XYZ).2;
-        let delta = (target - current + PI).rem_euclid(2.0 * PI) - PI;
-        let max_step = ANGULAR_SPEED * time.delta_secs();
-        let step = delta.clamp(-max_step, max_step);
-        player.0.rotation = Quat::from_rotation_z(current + step);
-    }
-
-    let velocity = direction.normalize_or_zero() * PLAYER_SPEED;
-    let move_delta = velocity * time.delta_secs();
-    player.0.translation += move_delta.extend(0.0);
-    player.1.0 = velocity;
-}
+// No client-side physics - server is fully authoritative
+// All movement is calculated server-side and applied via network.rs
 
 pub fn update_thruster_length(
     mut thrusters: Query<(&Thruster, &ThrusterOwner, &mut Transform)>,

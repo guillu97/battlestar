@@ -12,6 +12,7 @@ pub struct Asteroid;
 #[derive(Component)]
 pub struct Player;
 
+// Velocity is read-only from server updates (no client-side physics)
 #[derive(Component, Default)]
 pub struct Velocity(pub Vec2);
 
@@ -55,6 +56,13 @@ pub struct JoystickKnobBundle {
 #[derive(Component)]
 pub struct NetworkedPlayer {
 	pub id: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ServerMessage {
+	Welcome { assigned_id: u32 },
+	GameState(GameState),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

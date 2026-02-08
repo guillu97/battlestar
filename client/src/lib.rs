@@ -38,7 +38,6 @@ fn build_app() -> App {
         .add_systems(
             Update,
             (
-                systems::movement::move_player,
                 systems::movement::update_thruster_length,
                 systems::camera::update_camera,
                 systems::joystick::update_joystick,

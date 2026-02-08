@@ -1,4 +1,4 @@
-use crate::components::{ClientInput, GameState, NetworkedPlayer, ServerColor};
+use crate::components::{ClientInput, ServerMessage, NetworkedPlayer, ServerColor};
 use bevy::prelude::*;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::prelude::*;
@@ -30,7 +30,8 @@ unsafe impl Sync for NetworkClient {}
 
 impl Default for NetworkClient {
     fn default() -> Self {
-        let player_id = (js_sys::Math::random() * 1000000.0) as u32;
+        // Player ID will be assigned by server
+        let player_id = 0;
         
         // Determine WebSocket URL
         let ws_url = {
@@ -132,10 +133,9 @@ pub fn send_player_input(
     client: Res<NetworkClient>,
     ws_handle: Option<Res<WebSocketHandle>>,
     kb_input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
 ) {
-    if !client.connected {
-        return;
+    if !client.connected || client.player_id == 0 {
+        return; // Wait for server to assign ID
     }
 
     let Some(ws_handle) = ws_handle else {
@@ -158,11 +158,11 @@ pub fn send_player_input(
         rotate += 1.0;
     }
 
-    // Send input every frame (even if zero) so server knows player is still active
+    // Send raw input values - server handles physics timing
     let input = ClientInput {
         player_id: client.player_id,
         thrust,
-        rotate: rotate * time.delta_secs() * 3.0,
+        rotate,
     };
 
     if let Ok(json) = serde_json::to_string(&input) {
@@ -172,9 +172,10 @@ pub fn send_player_input(
 
 pub fn receive_game_state(
     mut commands: Commands,
-    client: Res<NetworkClient>,
+    mut client: ResMut<NetworkClient>,
     mut player_color: ResMut<PlayerColor>,
     mut existing_ships: Query<(Entity, &NetworkedPlayer, &mut Transform), Without<crate::components::Player>>,
+    mut local_player: Query<(&mut Transform, &mut crate::components::Velocity), With<crate::components::Player>>,
 ) {
     if !client.connected {
         return;
@@ -189,16 +190,38 @@ pub fn receive_game_state(
     };
 
     for msg in messages {
-        if let Ok(game_state) = serde_json::from_str::<GameState>(&msg) {
-            // Track which ships we've seen
-            let mut seen_ids = std::collections::HashSet::new();
+        if let Ok(server_msg) = serde_json::from_str::<ServerMessage>(&msg) {
+            match server_msg {
+                ServerMessage::Welcome { assigned_id } => {
+                    info!("Received player ID: {}", assigned_id);
+                    client.player_id = assigned_id;
+                }
+                ServerMessage::GameState(game_state) => {
+                    // Track which ships we've seen
+                    let mut seen_ids = std::collections::HashSet::new();
 
-            for server_ship in game_state.ships {
-                seen_ids.insert(server_ship.id);
+                    for server_ship in game_state.ships {
+                        seen_ids.insert(server_ship.id);
 
-                // Store color for local player from server
+                // Update local player from server state (fully authoritative)
                 if server_ship.id == client.player_id {
                     player_color.color = Some(server_ship.color);
+                    
+                    // Server is authoritative - interpolate smoothly to avoid visual rollbacks
+                    if let Some((mut transform, mut velocity)) = local_player.iter_mut().next() {
+                        // Interpolate position for smooth movement (higher factor = faster convergence)
+                        let blend = 0.5; // 50% blend per frame at 60fps = smooth but responsive
+                        transform.translation.x += (server_ship.position.x - transform.translation.x) * blend;
+                        transform.translation.y += (server_ship.position.y - transform.translation.y) * blend;
+                        
+                        // Interpolate rotation
+                        let target_quat = Quat::from_rotation_z(server_ship.rotation);
+                        transform.rotation = transform.rotation.slerp(target_quat, blend);
+                        
+                        // Update velocity directly (used for thruster visuals)
+                        velocity.0.x = server_ship.velocity.x;
+                        velocity.0.y = server_ship.velocity.y;
+                    }
                     continue;
                 }
 
@@ -206,10 +229,13 @@ pub fn receive_game_state(
                 let mut found = false;
                 for (_entity, networked, mut transform) in existing_ships.iter_mut() {
                     if networked.id == server_ship.id {
-                        // Update existing ship
-                        transform.translation.x = server_ship.position.x;
-                        transform.translation.y = server_ship.position.y;
-                        transform.rotation = Quat::from_rotation_z(server_ship.rotation);
+                        // Interpolate other players for smooth network updates
+                        let blend = 0.3; // Slightly lower for remote players to reduce jitter
+                        transform.translation.x += (server_ship.position.x - transform.translation.x) * blend;
+                        transform.translation.y += (server_ship.position.y - transform.translation.y) * blend;
+                        
+                        let target_quat = Quat::from_rotation_z(server_ship.rotation);
+                        transform.rotation = transform.rotation.slerp(target_quat, blend);
                         found = true;
                         break;
                     }
@@ -226,10 +252,12 @@ pub fn receive_game_state(
                 }
             }
 
-            // Remove ships that no longer exist
-            for (entity, networked, _) in existing_ships.iter() {
-                if !seen_ids.contains(&networked.id) {
-                    commands.entity(entity).despawn();
+                    // Remove ships that no longer exist
+                    for (entity, networked, _) in existing_ships.iter() {
+                        if !seen_ids.contains(&networked.id) {
+                            commands.entity(entity).despawn();
+                        }
+                    }
                 }
             }
         }
