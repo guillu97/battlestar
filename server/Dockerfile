@@ -1,7 +1,7 @@
 # Dockerfile for Battlestar Server - Fly.io deployment
 
 # Build stage
-FROM rust:1.75-slim as builder
+FROM rust:1.93.0-slim as builder
 
 WORKDIR /app
 
