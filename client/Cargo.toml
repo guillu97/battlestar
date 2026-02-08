@@ -1,7 +1,8 @@
 [package]
 name = "battlestar-client"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+rust-version = "1.83"
 
 [lib]
 crate-type = ["cdylib"]          # Obligatoire pour wasm-bindgen / trunk
@@ -25,8 +26,3 @@ web-sys = { version = "0.3", features = ["Window", "Location", "WebSocket", "Mes
 # Optionnel : pour des assets web (si tu charges des fichiers)
 # image = { version = "0.25", default-features = false, features = ["png"] }
 # wasm-bindgen = "0.2"   # souvent ajouté automatiquement par trunk
-
-
-[build]
-target = "index.html"
-dist = "www"

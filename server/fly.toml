@@ -4,7 +4,7 @@ primary_region = "cdg"  # Paris - change to your preferred region
 
 [build]
   [build.args]
-    RUST_VERSION = "1.75"
+    RUST_VERSION = "1.93"
 
 [env]
   RUST_LOG = "info"
