@@ -53,9 +53,8 @@ impl Default for NetworkClient {
                 // Force localhost:3000 for local development
                 format!("{}://localhost:3000/ws", ws_protocol)
             } else {
-                // For production, use the current host
-                let host = location.host().unwrap_or_else(|_| "localhost:3000".to_string());
-                format!("{}://{}/ws", ws_protocol, host)
+                // Production: use Fly.io server
+                "wss://battlestar.fly.dev/ws".to_string()
             };
             
             ws_url
