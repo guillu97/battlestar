@@ -1,5 +1,6 @@
 use crate::components::{ MapBoundary, Player, Ship, Thruster, ThrusterOwner, Velocity};
-use bevy::color::palettes::css::{BLACK, DARK_CYAN, GRAY, RED};
+use crate::constants::WORLD_LIMIT;
+use bevy::color::palettes::css::{BLACK, DARK_CYAN, RED};
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy_asset::RenderAssetUsages;
@@ -81,7 +82,7 @@ pub fn build_thruster_mesh() -> Mesh {
 
 impl MapBoundary {
     pub fn spawn(commands: &mut Commands) -> Entity {
-        let map_limit = 400.0;
+        let map_limit = WORLD_LIMIT;
         let boundary_shape = shapes::Rectangle {
             extents: Vec2::new(map_limit * 2.0, map_limit * 2.0),
             ..Default::default()
