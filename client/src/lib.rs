@@ -38,6 +38,7 @@ fn build_app() -> App {
         .add_systems(
             Update,
             (
+                systems::movement::apply_local_physics,
                 systems::movement::update_thruster_length,
                 systems::camera::update_camera,
                 systems::joystick::update_joystick,
