@@ -13,4 +13,4 @@ tokio = { version = "1", features = ["full"] }
 tungstenite = "0.28"
 
 [build-dependencies]
-toml = { workspace = true }
+toml = "0.9"

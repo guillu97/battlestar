@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
 
 # Copy manifests and source code
 COPY Cargo.toml Cargo.lock* ./
+COPY build.rs ./
+COPY ../game-constants.toml ./
 COPY src ./src
 
 # Build with release optimizations
