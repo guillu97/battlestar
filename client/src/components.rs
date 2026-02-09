@@ -7,9 +7,6 @@ use serde::{Deserialize, Serialize};
 pub struct Ship;
 
 #[derive(Component)]
-pub struct Asteroid;
-
-#[derive(Component)]
 pub struct Player;
 
 #[derive(Component)]
