@@ -1,7 +1,8 @@
 use super::types::Vec2;
+use crate::constants::WORLD_LIMIT;
 
 pub fn wrap_position(pos: &mut Vec2) {
-    let limit = 400.0;
+    let limit = WORLD_LIMIT;
     if pos.x > limit {
         pos.x = -limit;
     } else if pos.x < -limit {

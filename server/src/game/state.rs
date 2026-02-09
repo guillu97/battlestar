@@ -1,17 +1,8 @@
 use super::physics::{distance, wrap_position};
 use super::types::{Asteroid, Color, Ship, Vec2};
+use crate::constants::*;
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
-
-// Physics constants
-pub struct PhysicsConfig;
-impl PhysicsConfig {
-    pub const THRUST_ACCEL: f32 = 2000.0;  // pixels/sec²
-    pub const ROTATION_SPEED: f32 = 6.0;   // radians/sec
-    pub const MAX_SPEED: f32 = 1000.0;      // pixels/sec
-    pub const DRAG: f32 = 0.98;            // velocity multiplier per frame
-    pub const SHIP_RADIUS: f32 = 25.0;     // pixels
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -85,13 +76,13 @@ impl GameState {
             .expect("ship exists");
 
         // Apply rotation with dt - NEGATIVE because D key should rotate clockwise
-        ship.rotation -= input.rotate * PhysicsConfig::ROTATION_SPEED * dt;
+        ship.rotation -= input.rotate * ROTATION_SPEED * dt;
         
         // Apply thrust in facing direction with dt
         // At rotation=0, ship points UP (Y+), not RIGHT
         // So we need: x = -sin(rotation), y = cos(rotation)
-        ship.velocity.x -= input.thrust * ship.rotation.sin() * PhysicsConfig::THRUST_ACCEL * dt;
-        ship.velocity.y += input.thrust * ship.rotation.cos() * PhysicsConfig::THRUST_ACCEL * dt;
+        ship.velocity.x -= input.thrust * ship.rotation.sin() * THRUST_ACCEL * dt;
+        ship.velocity.y += input.thrust * ship.rotation.cos() * THRUST_ACCEL * dt;
     }
 
     pub fn step(&mut self, dt: f32) {
@@ -100,14 +91,14 @@ impl GameState {
         // Integrate velocity (1 unit = 1 pixel/second at 60Hz)
         for ship in &mut self.ships {
             // Apply drag (friction)
-            let drag_factor = PhysicsConfig::DRAG.powf(dt * 60.0);
+            let drag_factor = DRAG.powf(dt * 60.0);
             ship.velocity.x *= drag_factor;
             ship.velocity.y *= drag_factor;
             
             // Clamp to max speed
             let speed = (ship.velocity.x * ship.velocity.x + ship.velocity.y * ship.velocity.y).sqrt();
-            if speed > PhysicsConfig::MAX_SPEED {
-                let scale = PhysicsConfig::MAX_SPEED / speed;
+            if speed > MAX_SPEED {
+                let scale = MAX_SPEED / speed;
                 ship.velocity.x *= scale;
                 ship.velocity.y *= scale;
             }
@@ -126,7 +117,7 @@ impl GameState {
         // Check collisions and destroy ships that hit asteroids
         for ship in &mut self.ships {
             for asteroid in &self.asteroids {
-                let collision_distance = PhysicsConfig::SHIP_RADIUS + asteroid.radius;
+                let collision_distance = SHIP_RADIUS + asteroid.radius;
                 if distance(ship.position, asteroid.position) < collision_distance {
                     // Ship destroyed - respawn at center with zero velocity
                     ship.position = Vec2 { x: 0.0, y: 0.0 };
