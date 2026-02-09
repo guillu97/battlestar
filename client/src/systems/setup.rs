@@ -9,7 +9,7 @@ pub fn setup(
 ) {
     let ship_entity = Ship::spawn(&mut commands, &mut meshes, &mut materials, Vec3::ZERO);
     commands.insert_resource(LocalShipEntity(Some(ship_entity)));
-    MapBoundary::spawn(&mut commands);
+    MapBoundary::spawn(&mut commands, &mut meshes, &mut materials);
 }
 
 pub fn setup_instructions(mut commands: Commands) {

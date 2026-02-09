@@ -11,8 +11,6 @@ crate-type = ["cdylib"]          # Obligatoire pour wasm-bindgen / trunk
 bevy = { version = "0.18", features = ["bevy_sprite", "png", "webgl2"] }
 bevy_asset = "0.18"
 
-bevy_prototype_lyon = "0.16"          # ← juste ça, sans features inutiles
-
 serde = { workspace = true }
 serde_json = "1"
 

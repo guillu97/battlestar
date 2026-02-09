@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_prototype_lyon::prelude::ShapePlugin;
 
 mod components;
 mod constants;
@@ -24,7 +23,6 @@ fn build_app() -> App {
             }),
             ..default()
         }))
-        .add_plugins(ShapePlugin)
         .add_systems(
             Startup,
             (

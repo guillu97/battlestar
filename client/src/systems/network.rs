@@ -334,6 +334,8 @@ pub fn receive_game_state(
                             // Spawn new networked asteroid
                             spawn_networked_asteroid(
                                 &mut commands,
+                                &mut meshes,
+                                &mut materials,
                                 server_asteroid.id,
                                 Vec3::new(server_asteroid.position.x, server_asteroid.position.y, 0.0),
                                 server_asteroid.radius,
@@ -387,21 +389,11 @@ pub fn update_local_ship_color(
         
         // Spawn new ship with correct color
         use crate::components::{Ship, Player, Velocity};
-        use bevy_prototype_lyon::prelude::*;
-        use bevy::color::palettes::css::BLACK;
-        
-        let ship_shape = shapes::RegularPolygon {
-            sides: 3,
-            feature: shapes::RegularPolygonFeature::Radius(25.0),
-            ..Default::default()
-        };
 
         let ship_entity = commands
             .spawn((
-                ShapeBuilder::with(&ship_shape)
-                    .fill(Fill::color(Color::srgb(color.r, color.g, color.b)))
-                    .stroke(Stroke::new(BLACK, 2.0f32))
-                    .build(),
+                Mesh2d(meshes.add(crate::entities::build_triangle_mesh(25.0))),
+                MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(color.r, color.g, color.b)))),
                 Transform::from_translation(position).with_rotation(rotation),
                 Ship,
                 Player,
@@ -441,23 +433,13 @@ fn spawn_networked_ship(
     position: Vec3,
     color: ServerColor,
 ) {
-    use bevy::color::palettes::css::BLACK;
-    use bevy_prototype_lyon::prelude::*;
     use crate::components::{Thruster, ThrusterOwner, Velocity};
-
-    let ship_shape = shapes::RegularPolygon {
-        sides: 3,
-        feature: shapes::RegularPolygonFeature::Radius(25.0),
-        ..Default::default()
-    };
 
     let bevy_color = Color::srgb(color.r, color.g, color.b);
 
     let ship_entity = commands.spawn((
-        ShapeBuilder::with(&ship_shape)
-            .fill(Fill::color(bevy_color))
-            .stroke(Stroke::new(BLACK, 2.0f32))
-            .build(),
+        Mesh2d(meshes.add(crate::entities::build_triangle_mesh(25.0))),
+        MeshMaterial2d(materials.add(ColorMaterial::from(bevy_color))),
         Transform::from_translation(position),
         NetworkedPlayer { id },
         Velocity::default(),
@@ -483,23 +465,15 @@ fn spawn_networked_ship(
 
 fn spawn_networked_asteroid(
     commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
     id: u32,
     position: Vec3,
     radius: f32,
 ) {
-    use bevy::color::palettes::css::{BLACK, GRAY};
-    use bevy_prototype_lyon::prelude::*;
-
-    let asteroid_shape = shapes::Circle {
-        radius,
-        ..Default::default()
-    };
-
     commands.spawn((
-        ShapeBuilder::with(&asteroid_shape)
-            .fill(Fill::color(GRAY))
-            .stroke(Stroke::new(BLACK, 1.0f32))
-            .build(),
+        Mesh2d(meshes.add(crate::entities::build_circle_mesh(radius, 32))),
+        MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 0.5)))),
         Transform::from_translation(position),
         NetworkedAsteroid { id },
     ));
