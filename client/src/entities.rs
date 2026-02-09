@@ -1,4 +1,4 @@
-use crate::components::{Asteroid, MapBoundary, Player, Ship, Thruster, ThrusterOwner, Velocity};
+use crate::components::{ MapBoundary, Player, Ship, Thruster, ThrusterOwner, Velocity};
 use bevy::color::palettes::css::{BLACK, DARK_CYAN, GRAY, RED};
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
@@ -75,30 +75,6 @@ pub fn build_thruster_mesh() -> Mesh {
     );
     mesh.insert_indices(Indices::U32(vec![0, 1, 2]));
     mesh
-}
-
-// ── Asteroid ───────────────────────────────────────────────────────────
-
-impl Asteroid {
-    pub fn spawn(commands: &mut Commands, position: Vec3, radius: f32) -> Entity {
-        let asteroid_shape = shapes::Circle {
-            radius,
-            ..Default::default()
-        };
-
-        let entity = commands
-            .spawn((
-                ShapeBuilder::with(&asteroid_shape)
-                    .fill(Fill::color(GRAY))
-                    .stroke(Stroke::new(BLACK, 1.0 as f32))
-                    .build(),
-                Transform::from_translation(position),
-                Asteroid,
-            ))
-            .id();
-
-        entity
-    }
 }
 
 // ── Map Boundary ───────────────────────────────────────────────────────
