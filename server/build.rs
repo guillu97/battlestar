@@ -11,7 +11,14 @@ fn get_float(value: &toml::Value, key: &str) -> f32 {
 fn main() {
     // Read the shared constants file
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    
+    // Try parent directory first (normal workspace), then current directory (Docker build)
     let constants_path = Path::new(&manifest_dir).parent().unwrap().join("game-constants.toml");
+    let constants_path = if constants_path.exists() {
+        constants_path
+    } else {
+        Path::new(&manifest_dir).join("game-constants.toml")
+    };
     
     // Tell Cargo to rerun this build script if the constants file changes
     println!("cargo:rerun-if-changed={}", constants_path.display());
