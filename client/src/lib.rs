@@ -3,6 +3,7 @@ use bevy::prelude::*;
 mod components;
 mod constants;
 mod entities;
+mod net;
 mod systems;
 
 // src/lib.rs (extrait minimal pour Bevy WASM)
@@ -30,7 +31,7 @@ fn build_app() -> App {
                 systems::setup::setup_instructions,
                 systems::camera::setup_camera,
                 systems::joystick::setup_joystick,
-                systems::network::setup_network,
+                net::setup_network,
             ),
         )
         .add_systems(
@@ -45,11 +46,13 @@ fn build_app() -> App {
         .add_systems(
             Update,
             (
-                systems::network::send_player_input,
-                systems::network::receive_game_state,
+                net::send_player_input,
+                net::receive_game_state,
             ),
         )
-        .add_systems(Update, systems::network::update_local_ship_color);
+        .add_systems(Update, net::update_local_ship_color)
+        .insert_resource(net::PlayerColor::default())
+        .insert_resource(net::LocalShipEntity::default());
     app
 }
 

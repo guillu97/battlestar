@@ -1,4 +1,4 @@
-use crate::game::{ClientInput, ServerMessage};
+use battlestar_shared::{ClientInput, ServerMessage};
 use crate::state::AppState;
 use axum::{
     extract::State,
@@ -17,7 +17,7 @@ pub async fn ws_handler(
 async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     // Assign unique player ID
     let player_id = state.next_player_id.fetch_add(1, Ordering::SeqCst);
-    
+
     // Send Welcome message
     let welcome = ServerMessage::Welcome {
         assigned_id: player_id,
@@ -27,13 +27,13 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
             return;
         }
     }
-    
+
     // Add to connected players
     {
         let mut players = state.connected_players.lock().await;
         players.insert(player_id);
     }
-    
+
     let mut rx = state.broadcaster.subscribe();
 
     loop {
@@ -47,7 +47,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                     if let Ok(mut input) = serde_json::from_str::<ClientInput>(&text) {
                         // Override client's player_id with server-assigned ID
                         input.player_id = player_id;
-                        
+
                         // Push input to buffer to be processed in game loop
                         let mut buffer = state.input_buffer.lock().await;
                         buffer.push_back(input);
@@ -61,12 +61,12 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
             }
         }
     }
-    
+
     // Cleanup on disconnect
     {
         let mut players = state.connected_players.lock().await;
         players.remove(&player_id);
-        
+
         let mut gs = state.game_state.lock().await;
         gs.ships.retain(|ship| ship.id != player_id);
     }

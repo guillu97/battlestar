@@ -1,5 +1,5 @@
 use crate::components::{MapBoundary, Ship};
-use crate::systems::network::LocalShipEntity;
+use crate::net::LocalShipEntity;
 use bevy::prelude::*;
 
 pub fn setup(
