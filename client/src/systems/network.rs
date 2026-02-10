@@ -102,6 +102,13 @@ pub fn setup_network(mut commands: Commands) {
     
     let ws_url = client.ws_url.clone();
     info!("Connecting to WebSocket: {}", ws_url);
+    
+    // Debug: log hostname detection
+    let window = web_sys::window().expect("no global `window` exists");
+    let location = window.location();
+    let hostname = location.hostname().unwrap_or_default();
+    let protocol = location.protocol().unwrap_or_default();
+    info!("Detected hostname: '{}', protocol: '{}'", hostname, protocol);
 
     match WebSocket::new(&ws_url) {
         Ok(ws) => {
@@ -120,8 +127,10 @@ pub fn setup_network(mut commands: Commands) {
             onmessage_callback.forget();
 
             // Setup onerror callback
+            let ws_url_for_error = ws_url.clone();
             let onerror_callback = Closure::<dyn FnMut(_)>::new(move |e: ErrorEvent| {
-                error!("WebSocket error: {:?}", e);
+                error!("WebSocket error connecting to {}: {:?}", ws_url_for_error, e);
+                error!("Make sure the server is running on the expected address");
             });
             ws.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
             onerror_callback.forget();
@@ -132,6 +141,15 @@ pub fn setup_network(mut commands: Commands) {
             });
             ws.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             onopen_callback.forget();
+
+            // Setup onclose callback
+            let ws_url_for_close = ws_url.clone();
+            let onclose_callback = Closure::<dyn FnMut(_)>::new(move |e: web_sys::CloseEvent| {
+                warn!("WebSocket to {} closed: code={}, reason={}, clean={}", 
+                    ws_url_for_close, e.code(), e.reason(), e.was_clean());
+            });
+            ws.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
+            onclose_callback.forget();
 
             client.connected = true;
             
