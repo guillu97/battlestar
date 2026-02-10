@@ -1,5 +1,6 @@
-use crate::components::{ClientInput, ServerMessage, NetworkedPlayer, NetworkedAsteroid, ServerColor};
+use crate::components::{NetworkedAsteroid, NetworkedPlayer};
 use crate::constants::WORLD_LIMIT;
+use battlestar_shared::{ClientInput, Color as NetColor, ServerMessage};
 use bevy::prelude::*;
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::prelude::*;
@@ -17,8 +18,8 @@ pub struct NetworkClient {
 
 #[derive(Resource, Default)]
 pub struct PlayerColor {
-    pub color: Option<ServerColor>,
-    pub applied: Option<ServerColor>,
+    pub color: Option<NetColor>,
+    pub applied: Option<NetColor>,
 }
 
 #[derive(Resource, Default)]
@@ -449,7 +450,7 @@ fn spawn_networked_ship(
     materials: &mut Assets<ColorMaterial>,
     id: u32,
     position: Vec3,
-    color: ServerColor,
+    color: NetColor,
 ) {
     use crate::components::{Thruster, ThrusterOwner, Velocity};
 

@@ -1,5 +1,5 @@
 mod physics;
 mod state;
-mod types;
 
-pub use state::{ClientInput, GameState, ServerMessage};
+pub use battlestar_shared::{ClientInput, GameState, ServerMessage};
+pub use state::GameStateExt;

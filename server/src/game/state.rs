@@ -1,32 +1,16 @@
 use super::physics::{distance, wrap_position};
-use super::types::{Asteroid, Color, Ship, Vec2};
+use battlestar_shared::{Asteroid, ClientInput, Color, GameState, Ship, Vec2};
 use crate::constants::*;
 use rand::RngExt;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ServerMessage {
-    Welcome { assigned_id: u32 },
-    GameState(GameState),
+pub trait GameStateExt {
+    fn new() -> Self;
+    fn apply_input(&mut self, input: ClientInput, dt: f32);
+    fn step(&mut self, dt: f32);
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClientInput {
-    pub player_id: u32,
-    pub thrust: f32,
-    pub rotate: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GameState {
-    pub ships: Vec<Ship>,
-    pub asteroids: Vec<Asteroid>,
-    pub tick: u64,
-}
-
-impl GameState {
-    pub fn new() -> Self {
+impl GameStateExt for GameState {
+    fn new() -> Self {
         Self {
             ships: Vec::new(),
             asteroids: vec![
@@ -47,11 +31,11 @@ impl GameState {
         }
     }
 
-    pub fn apply_input(&mut self, mut input: ClientInput, dt: f32) {
+    fn apply_input(&mut self, mut input: ClientInput, dt: f32) {
         // Validate and clamp inputs to prevent cheating
         input.thrust = input.thrust.clamp(-1.0, 1.0);
         input.rotate = input.rotate.clamp(-1.0, 1.0);
-        
+
         let ship_exists = self.ships.iter().any(|ship| ship.id == input.player_id);
 
         if !ship_exists {
@@ -77,7 +61,7 @@ impl GameState {
 
         // Apply rotation with dt - NEGATIVE because D key should rotate clockwise
         ship.rotation -= input.rotate * ROTATION_SPEED * dt;
-        
+
         // Apply thrust in facing direction with dt
         // At rotation=0, ship points UP (Y+), not RIGHT
         // So we need: x = -sin(rotation), y = cos(rotation)
@@ -85,7 +69,7 @@ impl GameState {
         ship.velocity.y += input.thrust * ship.rotation.cos() * THRUST_ACCEL * dt;
     }
 
-    pub fn step(&mut self, dt: f32) {
+    fn step(&mut self, dt: f32) {
         self.tick = self.tick.wrapping_add(1);
 
         // Integrate velocity (1 unit = 1 pixel/second at 60Hz)
@@ -94,7 +78,7 @@ impl GameState {
             let drag_factor = DRAG.powf(dt * 60.0);
             ship.velocity.x *= drag_factor;
             ship.velocity.y *= drag_factor;
-            
+
             // Clamp to max speed
             let speed = (ship.velocity.x * ship.velocity.x + ship.velocity.y * ship.velocity.y).sqrt();
             if speed > MAX_SPEED {
@@ -102,7 +86,7 @@ impl GameState {
                 ship.velocity.x *= scale;
                 ship.velocity.y *= scale;
             }
-            
+
             ship.position.x += ship.velocity.x * dt;
             ship.position.y += ship.velocity.y * dt;
             wrap_position(&mut ship.position);

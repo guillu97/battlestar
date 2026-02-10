@@ -1,4 +1,5 @@
 use crate::game::{ClientInput, GameState, ServerMessage};
+use crate::game::GameStateExt;
 use std::{
     collections::{HashSet, VecDeque},
     sync::{atomic::AtomicU32, Arc},
@@ -17,7 +18,7 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Arc<Self> {
         let (tx, _rx) = broadcast::channel(256);
-        let game_state = Arc::new(Mutex::new(GameState::new()));
+        let game_state = Arc::new(Mutex::new(<GameState as GameStateExt>::new()));
         let input_buffer = Arc::new(Mutex::new(VecDeque::new()));
         let connected_players = Arc::new(Mutex::new(HashSet::new()));
         let next_player_id = AtomicU32::new(1);
