@@ -1,6 +1,6 @@
 mod constants;
-mod game;
-mod handlers;
+mod net;
+mod sim;
 mod state;
 
 use axum::{routing::get, Router};
@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/health", get(health_check))
-        .route("/ws", get(handlers::ws_handler))
+        .route("/ws", get(net::ws::ws_handler))
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;

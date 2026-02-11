@@ -379,6 +379,7 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 name = "battlestar-client"
 version = "0.1.0"
 dependencies = [
+ "battlestar-shared",
  "bevy",
  "bevy_asset",
  "js-sys",
@@ -395,12 +396,20 @@ name = "battlestar-server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "battlestar-shared",
  "rand 0.10.0",
  "serde",
  "serde_json",
  "tokio",
  "toml",
  "tungstenite",
+]
+
+[[package]]
+name = "battlestar-shared"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

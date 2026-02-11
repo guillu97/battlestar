@@ -1,4 +1,4 @@
-use super::types::Vec2;
+use battlestar_shared::Vec2;
 use crate::constants::WORLD_LIMIT;
 
 pub fn wrap_position(pos: &mut Vec2) {

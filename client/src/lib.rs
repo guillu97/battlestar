@@ -3,6 +3,7 @@ use bevy::prelude::*;
 mod components;
 mod constants;
 mod entities;
+mod net;
 mod systems;
 
 // src/lib.rs (extrait minimal pour Bevy WASM)
@@ -30,26 +31,32 @@ fn build_app() -> App {
                 systems::setup::setup_instructions,
                 systems::camera::setup_camera,
                 systems::joystick::setup_joystick,
-                systems::network::setup_network,
+                net::setup_network,
             ),
         )
         .add_systems(
             Update,
             (
-                systems::movement::apply_local_physics,
-                systems::movement::update_thruster_length,
-                systems::camera::update_camera,
+                net::poll_connection_state,
                 systems::joystick::update_joystick,
+                net::gather_player_input
+                    .after(systems::joystick::update_joystick),
+                net::send_player_input
+                    .after(net::gather_player_input),
+                net::receive_game_state,
+                systems::movement::apply_local_physics
+                    .after(net::gather_player_input),
+                systems::movement::update_thruster_length
+                    .after(systems::movement::apply_local_physics),
+                systems::camera::update_camera
+                    .after(systems::movement::apply_local_physics),
+                net::update_local_ship_color,
             ),
         )
-        .add_systems(
-            Update,
-            (
-                systems::network::send_player_input,
-                systems::network::receive_game_state,
-            ),
-        )
-        .add_systems(Update, systems::network::update_local_ship_color);
+        .insert_resource(net::PlayerInput::default())
+        .insert_resource(net::PlayerColor::default())
+        .insert_resource(net::LocalShipEntity::default())
+        .insert_resource(net::InputThrottle::default());
     app
 }
 
