@@ -3,7 +3,6 @@ app = "battlestar"
 primary_region = "cdg"  # Paris - change to your preferred region
 
 [build]
-  dockerfile = "Dockerfile"
   [build.args]
     RUST_VERSION = "1.93"
 

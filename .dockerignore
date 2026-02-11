@@ -1,0 +1,9 @@
+target/
+client/
+.git/
+.github/
+*.md
+*.log
+.env
+vercel.json
+deploy-all.ps1

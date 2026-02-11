@@ -46,14 +46,12 @@ if (-not $ClientOnly) {
     Write-Host "📡 STEP 1: Deploying Server to Fly.io" -ForegroundColor Cyan
     Write-Host "======================================" -ForegroundColor Cyan
     
-    Push-Location server
-    
+    # Deploy from repo root (fly.toml + Dockerfile are at root)
     Write-Host "Building and deploying..." -ForegroundColor Yellow
     fly deploy
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Server deployment failed" -ForegroundColor Red
-        Pop-Location
         exit 1
     }
     
@@ -66,8 +64,6 @@ if (-not $ClientOnly) {
         Write-Host "🌐 Server URL: https://$ServerUrl" -ForegroundColor Green
         Write-Host "🔌 WebSocket: wss://$ServerUrl/ws" -ForegroundColor Green
     }
-    
-    Pop-Location
     Write-Host ""
 }
 

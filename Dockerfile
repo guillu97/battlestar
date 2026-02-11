@@ -26,8 +26,8 @@ COPY server/src ./server/src
 
 # Create a dummy client crate so workspace resolves
 RUN mkdir -p client/src && \
-    echo '[package]\nname = "battlestar-client"\nversion = "0.1.0"\nedition = "2021"\n' > client/Cargo.toml && \
-    echo '' > client/src/lib.rs
+    printf '[package]\nname = "battlestar-client"\nversion = "0.1.0"\nedition = "2021"\n' > client/Cargo.toml && \
+    touch client/src/lib.rs
 
 # Build server with release optimizations
 RUN cargo build --release -p battlestar-server
