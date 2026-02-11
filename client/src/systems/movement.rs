@@ -18,9 +18,10 @@ pub fn wrap_position(pos: &mut Vec3) {
 }
 
 // Client-side prediction for local player
+// Applies physics locally for immediate feedback; server corrections are blended in by sync system
 pub fn apply_local_physics(
     mut player_query: Query<(&mut Transform, &mut Velocity), With<Player>>,
-    kb_input: Res<ButtonInput<KeyCode>>,
+    player_input: Res<crate::net::PlayerInput>,
     time: Res<Time>,
 ) {
     let Some((mut transform, mut velocity)) = player_query.iter_mut().next() else {
@@ -29,21 +30,8 @@ pub fn apply_local_physics(
 
     let dt = time.delta().as_secs_f32();
 
-    let mut thrust = 0.0;
-    let mut rotate = 0.0;
-
-    if kb_input.pressed(KeyCode::KeyW) {
-        thrust += 1.0;
-    }
-    if kb_input.pressed(KeyCode::KeyS) {
-        thrust -= 1.0;
-    }
-    if kb_input.pressed(KeyCode::KeyA) {
-        rotate -= 1.0;
-    }
-    if kb_input.pressed(KeyCode::KeyD) {
-        rotate += 1.0;
-    }
+    let thrust = player_input.thrust;
+    let rotate = player_input.rotate;
 
     // Apply rotation - NEGATIVE because D key rotates clockwise
     let rotation_delta = -rotate * ROTATION_SPEED * dt;

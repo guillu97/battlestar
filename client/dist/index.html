@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Battlestar</title>
     <style>body { margin:0; overflow:hidden; background:#000; } canvas { display:block; }</style>
-<link rel="modulepreload" href="/battlestar-client-87e875195e471685.js" crossorigin="anonymous" integrity="sha384-kVKUbE4zTiNX2CaKDVhdy+EMoAysFT0qtLWi4vZgpL+vA2J8Q05KB3FdqVMe3pBu"><link rel="preload" href="/battlestar-client-87e875195e471685_bg.wasm" crossorigin="anonymous" integrity="sha384-F/L/AeFNFJ/xdMPtP2LXb5K4avp4nQwgZI71e1qCTzZVQgtIQz+yQ7UK7isOqcXr" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/battlestar-client-5d473bf7f590ed6e.js" crossorigin="anonymous" integrity="sha384-VTvWYe84Xxu1FCEik4+lRrf4HkimbwINkHR1+jsW15u+yggy/UNj1lAQ+5bwuEc5"><link rel="preload" href="/battlestar-client-5d473bf7f590ed6e_bg.wasm" crossorigin="anonymous" integrity="sha384-nJ14gHgrJARvXtzx2pxi2vFZ1v8JnCJfHeY+QsT0ffNw4wDMtHWHEAvPVAGzEqWh" as="fetch" type="application/wasm"></head>
 <body>
     <canvas id="canvas"></canvas>
     <script type="module">
@@ -13,8 +13,8 @@
     </script>
 
 <script type="module">
-import init, * as bindings from '/battlestar-client-87e875195e471685.js';
-const wasm = await init({ module_or_path: '/battlestar-client-87e875195e471685_bg.wasm' });
+import init, * as bindings from '/battlestar-client-5d473bf7f590ed6e.js';
+const wasm = await init({ module_or_path: '/battlestar-client-5d473bf7f590ed6e_bg.wasm' });
 
 
 window.wasmBindings = bindings;

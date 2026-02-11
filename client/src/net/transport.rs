@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{ErrorEvent, MessageEvent, WebSocket};
@@ -9,8 +9,8 @@ pub struct NetworkClient {
     pub player_id: u32,
     pub messages: Arc<Mutex<Vec<String>>>,
     pub connected: bool,
-    // Store WebSocket URL instead of WebSocket itself (WebSocket is not Send+Sync)
     ws_url: String,
+    connected_flag: Arc<AtomicBool>,
 }
 
 // Manual Send+Sync implementation
@@ -53,6 +53,7 @@ impl Default for NetworkClient {
             messages: Arc::new(Mutex::new(Vec::new())),
             connected: false,
             ws_url,
+            connected_flag: Arc::new(AtomicBool::new(false)),
         }
     }
 }
@@ -67,7 +68,7 @@ unsafe impl Send for WebSocketHandle {}
 unsafe impl Sync for WebSocketHandle {}
 
 pub fn setup_network(mut commands: Commands) {
-    let mut client = NetworkClient::default();
+    let client = NetworkClient::default();
 
     let ws_url = client.ws_url.clone();
     info!("Connecting to WebSocket: {}", ws_url);
@@ -105,14 +106,17 @@ pub fn setup_network(mut commands: Commands) {
             onerror_callback.forget();
 
             // Setup onopen callback
+            let connected_flag = client.connected_flag.clone();
             let onopen_callback = Closure::<dyn FnMut()>::new(move || {
                 info!("WebSocket connected!");
+                connected_flag.store(true, Ordering::Relaxed);
             });
             ws.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             onopen_callback.forget();
 
             // Setup onclose callback
             let ws_url_for_close = ws_url.clone();
+            let connected_flag_close = client.connected_flag.clone();
             let onclose_callback = Closure::<dyn FnMut(_)>::new(move |e: web_sys::CloseEvent| {
                 warn!(
                     "WebSocket to {} closed: code={}, reason={}, clean={}",
@@ -121,11 +125,10 @@ pub fn setup_network(mut commands: Commands) {
                     e.reason(),
                     e.was_clean()
                 );
+                connected_flag_close.store(false, Ordering::Relaxed);
             });
             ws.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
             onclose_callback.forget();
-
-            client.connected = true;
 
             commands.insert_resource(WebSocketHandle { ws });
         }
@@ -135,4 +138,9 @@ pub fn setup_network(mut commands: Commands) {
     }
 
     commands.insert_resource(client);
+}
+
+/// Polls the WebSocket connected flag each frame and updates the resource
+pub fn poll_connection_state(mut client: ResMut<NetworkClient>) {
+    client.connected = client.connected_flag.load(Ordering::Relaxed);
 }

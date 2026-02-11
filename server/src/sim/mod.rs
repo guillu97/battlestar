@@ -12,16 +12,16 @@ pub fn spawn_game_loop(state: Arc<AppState>) {
         loop {
             interval.tick().await;
 
-            // Drain input buffer and apply all inputs atomically
-            let inputs = {
-                let mut buffer = state.input_buffer.lock().await;
-                buffer.drain(..).collect::<Vec<_>>()
+            // Read latest input per player (exactly one input per player per tick)
+            let inputs: Vec<_> = {
+                let inputs = state.player_inputs.lock().await;
+                inputs.values().cloned().collect()
             };
 
             let dt = 1.0 / 20.0; // Match tick rate
             let mut gs = state.game_state.lock().await;
 
-            // Process all queued inputs for this tick
+            // Apply latest input for each player
             for input in inputs {
                 game::apply_input(&mut gs, input, dt);
             }

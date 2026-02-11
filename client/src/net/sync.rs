@@ -2,7 +2,6 @@ use battlestar_shared::{Color as NetColor, ServerMessage};
 use bevy::prelude::*;
 
 use crate::components::{NetworkedAsteroid, NetworkedPlayer};
-use crate::constants::WORLD_LIMIT;
 
 use super::transport::NetworkClient;
 
@@ -14,24 +13,6 @@ pub struct PlayerColor {
 
 #[derive(Resource, Default)]
 pub struct LocalShipEntity(pub Option<Entity>);
-
-// Calculate wrapped distance accounting for world boundaries
-fn wrapped_distance(a: Vec2, b: Vec2) -> f32 {
-    let world_size = WORLD_LIMIT * 2.0;
-
-    let mut dx = (a.x - b.x).abs();
-    let mut dy = (a.y - b.y).abs();
-
-    // Check if wrapping around is shorter
-    if dx > WORLD_LIMIT {
-        dx = world_size - dx;
-    }
-    if dy > WORLD_LIMIT {
-        dy = world_size - dy;
-    }
-
-    (dx * dx + dy * dy).sqrt()
-}
 
 pub fn receive_game_state(
     mut commands: Commands,
@@ -78,50 +59,30 @@ pub fn receive_game_state(
                     for server_ship in game_state.ships {
                         seen_ids.insert(server_ship.id);
 
-                        // Update local player from server state (server reconciliation)
+                        // Update local player from server state (server-authoritative)
                         if server_ship.id == client.player_id {
                             player_color.color = Some(server_ship.color);
 
                             if let Some((mut transform, mut velocity)) = local_player.iter_mut().next() {
-                                let server_pos = Vec2::new(server_ship.position.x, server_ship.position.y);
-                                let client_pos = transform.translation.truncate();
-                                let distance = wrapped_distance(client_pos, server_pos);
+                                let server_pos = Vec3::new(
+                                    server_ship.position.x,
+                                    server_ship.position.y,
+                                    0.0,
+                                );
 
-                                // If prediction error is too large, snap to server state
-                                if distance > 100.0 {
-                                    transform.translation.x = server_ship.position.x;
-                                    transform.translation.y = server_ship.position.y;
-                                    transform.rotation = Quat::from_rotation_z(server_ship.rotation);
-                                    velocity.0.x = server_ship.velocity.x;
-                                    velocity.0.y = server_ship.velocity.y;
-                                } else {
-                                    // Gentle correction towards server state (client-side prediction reconciliation)
-                                    let blend = 0.2; // Lower = smoother but more divergence tolerance
+                                // If far from server (collision/respawn), snap immediately
+                                // Otherwise smooth correction to avoid jitter with prediction
+                                let distance = transform.translation.distance(server_pos);
+                                let blend = if distance > 100.0 { 1.0 } else { 0.3 };
 
-                                    // Handle position correction with wrapping
-                                    let mut dx = server_ship.position.x - transform.translation.x;
-                                    let mut dy = server_ship.position.y - transform.translation.y;
+                                transform.translation = transform.translation.lerp(server_pos, blend);
 
-                                    // Correct for wrapping
-                                    let world_size = WORLD_LIMIT * 2.0;
-                                    if dx.abs() > WORLD_LIMIT {
-                                        dx = if dx > 0.0 { dx - world_size } else { dx + world_size };
-                                    }
-                                    if dy.abs() > WORLD_LIMIT {
-                                        dy = if dy > 0.0 { dy - world_size } else { dy + world_size };
-                                    }
+                                let server_rot = Quat::from_rotation_z(server_ship.rotation);
+                                transform.rotation = transform.rotation.slerp(server_rot, blend);
 
-                                    transform.translation.x += dx * blend;
-                                    transform.translation.y += dy * blend;
-
-                                    // Interpolate rotation
-                                    let target_quat = Quat::from_rotation_z(server_ship.rotation);
-                                    transform.rotation = transform.rotation.slerp(target_quat, blend);
-
-                                    // Blend velocity (affects thruster visuals)
-                                    velocity.0.x += (server_ship.velocity.x - velocity.0.x) * blend;
-                                    velocity.0.y += (server_ship.velocity.y - velocity.0.y) * blend;
-                                }
+                                // Snap velocity so client prediction stays accurate
+                                velocity.0.x = server_ship.velocity.x;
+                                velocity.0.y = server_ship.velocity.y;
                             }
                             continue;
                         }
