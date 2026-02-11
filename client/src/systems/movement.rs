@@ -1,24 +1,11 @@
+use battlestar_shared::{physics, Input, PhysicsConstants, Vec2};
 use crate::components::{Player, Thruster, ThrusterOwner, Velocity};
 use crate::constants::*;
 use bevy::prelude::*;
 
-// Wrap position when reaching world boundaries (teleport to other side)
-pub fn wrap_position(pos: &mut Vec3) {
-    if pos.x > WORLD_LIMIT {
-        pos.x = -WORLD_LIMIT;
-    } else if pos.x < -WORLD_LIMIT {
-        pos.x = WORLD_LIMIT;
-    }
-
-    if pos.y > WORLD_LIMIT {
-        pos.y = -WORLD_LIMIT;
-    } else if pos.y < -WORLD_LIMIT {
-        pos.y = WORLD_LIMIT;
-    }
-}
-
 // Client-side prediction for local player
 // Applies physics locally for immediate feedback; server corrections are blended in by sync system
+// Uses shared physics engine to ensure identical behavior with server
 pub fn apply_local_physics(
     mut player_query: Query<(&mut Transform, &mut Velocity), With<Player>>,
     player_input: Res<crate::net::PlayerInput>,
@@ -30,40 +17,54 @@ pub fn apply_local_physics(
 
     let dt = time.delta().as_secs_f32();
 
-    let thrust = player_input.thrust;
-    let rotate = player_input.rotate;
+    // Create physics constants from game constants
+    let constants = PhysicsConstants::from_game_constants(
+        THRUST_ACCEL,
+        ROTATION_SPEED,
+        MAX_SPEED,
+        DRAG,
+        WORLD_LIMIT,
+        SHIP_RADIUS,
+    );
 
-    // Apply rotation - NEGATIVE because D key rotates clockwise
-    let rotation_delta = -rotate * ROTATION_SPEED * dt;
-    transform.rotate_z(rotation_delta);
+    // Create shared input structure
+    let input = Input::new(player_input.thrust, player_input.rotate);
 
-    // Extract rotation angle from quaternion
-    let (_, _, rotation) = transform.rotation.to_euler(EulerRot::ZYX);
+    // Convert Bevy types to shared types
+    let mut position = Vec2::new(transform.translation.x, transform.translation.y);
+    let mut vel = Vec2::new(velocity.0.x, velocity.0.y);
 
-    // Apply thrust in facing direction
-    // At rotation=0, ship points UP (Y+)
-    velocity.0.x -= thrust * rotation.sin() * THRUST_ACCEL * dt;
-    velocity.0.y += thrust * rotation.cos() * THRUST_ACCEL * dt;
+    // Extract Z rotation from quaternion (for 2D game)
+    // Direct calculation: for a Z-axis rotation quaternion
+    let mut rotation = 2.0 * transform.rotation.z.atan2(transform.rotation.w);
 
-    // Apply drag (friction)
-    let drag_factor = DRAG.powf(dt * 60.0);
-    velocity.0.x *= drag_factor;
-    velocity.0.y *= drag_factor;
-
-    // Clamp to max speed
-    let speed = velocity.0.length();
-    if speed > MAX_SPEED {
-        let scale = MAX_SPEED / speed;
-        velocity.0.x *= scale;
-        velocity.0.y *= scale;
+    // DEBUG: Log rotation values
+    if player_input.rotate != 0.0 {
+        info!("🔄 Input rotate: {}, rotation before: {:.2}, rotation_speed: {}, dt: {}",
+              player_input.rotate, rotation, constants.rotation_speed, dt);
     }
 
-    // Apply velocity
-    transform.translation.x += velocity.0.x * dt;
-    transform.translation.y += velocity.0.y * dt;
+    // Apply shared physics (same code as server!)
+    physics::apply_ship_physics(
+        &mut position,
+        &mut vel,
+        &mut rotation,
+        &input,
+        dt,
+        &constants,
+    );
 
-    // Wrap position at world boundaries
-    wrap_position(&mut transform.translation);
+    // DEBUG: Log rotation after physics
+    if player_input.rotate != 0.0 {
+        info!("🔄 Rotation after physics: {:.2}", rotation);
+    }
+
+    // Convert back to Bevy types
+    transform.translation.x = position.x;
+    transform.translation.y = position.y;
+    transform.rotation = Quat::from_rotation_z(rotation);
+    velocity.0.x = vel.x;
+    velocity.0.y = vel.y;
 }
 
 pub fn update_thruster_length(

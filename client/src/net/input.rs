@@ -59,6 +59,11 @@ pub fn gather_player_input(
         }
     }
 
+    // DEBUG: Log input values when rotating
+    if rotate != 0.0 {
+        info!("⌨️  Gathered input - rotate: {}, thrust: {}", rotate, thrust);
+    }
+
     player_input.thrust = thrust;
     player_input.rotate = rotate;
 }

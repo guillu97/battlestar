@@ -2,6 +2,7 @@ use battlestar_shared::{Color as NetColor, ServerMessage};
 use bevy::prelude::*;
 
 use crate::components::{NetworkedAsteroid, NetworkedPlayer};
+use crate::domain;
 
 use super::transport::NetworkClient;
 
@@ -52,6 +53,110 @@ pub fn receive_game_state(
                     info!("Received player ID: {}", assigned_id);
                     client.player_id = assigned_id;
                 }
+                ServerMessage::DeltaState(delta_state) => {
+                    // Delta update: only changed ships (90% bandwidth reduction)
+                    // Track removed ships if this is a full state delta
+                    let mut seen_ids = if delta_state.is_full_state {
+                        Some(std::collections::HashSet::new())
+                    } else {
+                        None
+                    };
+
+                    for ship_update in delta_state.changed_ships {
+                        if let Some(ref mut ids) = seen_ids {
+                            ids.insert(ship_update.id);
+                        }
+
+                        // Update local player from server state (server-authoritative)
+                        if ship_update.id == client.player_id {
+                            // Update color if provided (spawn/respawn)
+                            if let Some(color) = ship_update.color {
+                                player_color.color = Some(color);
+                            }
+
+                            if let Some((mut transform, mut velocity)) = local_player.iter_mut().next() {
+                                let server_pos = Vec3::new(
+                                    ship_update.position.x,
+                                    ship_update.position.y,
+                                    0.0,
+                                );
+
+                                // If far from server (collision/respawn), snap immediately
+                                // Otherwise smooth correction to avoid jitter with prediction
+                                let distance = transform.translation.distance(server_pos);
+                                let blend = if distance > 100.0 { 1.0 } else { 0.3 };
+
+                                transform.translation = transform.translation.lerp(server_pos, blend);
+
+                                // For rotation: only reconcile if there's a big discrepancy (collision/respawn)
+                                // Otherwise trust client-side prediction to avoid fighting with local input
+                                if distance > 100.0 {
+                                    let server_rot = Quat::from_rotation_z(ship_update.rotation);
+                                    transform.rotation = server_rot;
+                                }
+
+                                // Snap velocity so client prediction stays accurate
+                                velocity.0.x = ship_update.velocity.x;
+                                velocity.0.y = ship_update.velocity.y;
+                            }
+                            continue;
+                        }
+
+                        // Find or create the ship entity for other players
+                        let mut found = false;
+                        for (_entity, networked, mut transform, mut velocity) in existing_ships.iter_mut() {
+                            if networked.id == ship_update.id {
+                                // Interpolate other players for smooth network updates
+                                let blend = 0.3;
+                                transform.translation.x += (ship_update.position.x - transform.translation.x) * blend;
+                                transform.translation.y += (ship_update.position.y - transform.translation.y) * blend;
+
+                                let target_quat = Quat::from_rotation_z(ship_update.rotation);
+                                transform.rotation = transform.rotation.slerp(target_quat, blend);
+
+                                // Update velocity for thruster visuals
+                                velocity.0.x = ship_update.velocity.x;
+                                velocity.0.y = ship_update.velocity.y;
+
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        if !found {
+                            // Need color to spawn - skip if not provided
+                            if let Some(color) = ship_update.color {
+                                domain::spawn_networked_ship(
+                                    &mut commands,
+                                    &mut meshes,
+                                    &mut materials,
+                                    ship_update.id,
+                                    Vec3::new(ship_update.position.x, ship_update.position.y, 0.0),
+                                    color,
+                                );
+                            }
+                        }
+                    }
+
+                    // Remove ships that were explicitly removed
+                    for removed_id in delta_state.removed_ship_ids {
+                        for (entity, networked, _, _) in existing_ships.iter() {
+                            if networked.id == removed_id {
+                                commands.entity(entity).despawn();
+                                break;
+                            }
+                        }
+                    }
+
+                    // If full state delta, remove ships not in update
+                    if let Some(seen_ids) = seen_ids {
+                        for (entity, networked, _, _) in existing_ships.iter() {
+                            if !seen_ids.contains(&networked.id) {
+                                commands.entity(entity).despawn();
+                            }
+                        }
+                    }
+                }
                 ServerMessage::GameState(game_state) => {
                     // Track which ships we've seen
                     let mut seen_ids = std::collections::HashSet::new();
@@ -77,8 +182,12 @@ pub fn receive_game_state(
 
                                 transform.translation = transform.translation.lerp(server_pos, blend);
 
-                                let server_rot = Quat::from_rotation_z(server_ship.rotation);
-                                transform.rotation = transform.rotation.slerp(server_rot, blend);
+                                // For rotation: only reconcile if there's a big discrepancy (collision/respawn)
+                                // Otherwise trust client-side prediction to avoid fighting with local input
+                                if distance > 100.0 {
+                                    let server_rot = Quat::from_rotation_z(server_ship.rotation);
+                                    transform.rotation = server_rot;
+                                }
 
                                 // Snap velocity so client prediction stays accurate
                                 velocity.0.x = server_ship.velocity.x;
@@ -110,7 +219,7 @@ pub fn receive_game_state(
 
                         if !found {
                             // Spawn new networked player ship
-                            spawn_networked_ship(
+                            domain::spawn_networked_ship(
                                 &mut commands,
                                 &mut meshes,
                                 &mut materials,
@@ -147,7 +256,7 @@ pub fn receive_game_state(
 
                         if !found {
                             // Spawn new networked asteroid
-                            spawn_networked_asteroid(
+                            domain::spawn_networked_asteroid(
                                 &mut commands,
                                 &mut meshes,
                                 &mut materials,
