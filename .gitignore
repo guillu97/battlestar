@@ -1,3 +1,6 @@
 /target
 .env
 client/dist/*
+# Claude Code temporary files
+tmpclaude-*
+claudetmp*

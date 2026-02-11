@@ -95,23 +95,27 @@ impl MapBoundary {
 
 pub fn build_triangle_mesh(radius: f32) -> Mesh {
     use std::f32::consts::PI;
-    
-    // Create a triangle pointing up (0° is up)
-    let angle_offset = -(PI + (PI/2.0)); // Rotate to point right initially
+
+    // Create a triangle pointing UP (Y+)
+    // At rotation=0, the triangle points up, which matches the physics engine
+    // The first vertex is the "tip" pointing up
     let vertices = [
+        // Tip (top, pointing up)
         [
-            radius * (angle_offset + 0.0 * 2.0 * PI / 3.0).cos(),
-            radius * (angle_offset + 0.0 * 2.0 * PI / 3.0).sin(),
+            0.0,
+            radius,
             0.0,
         ],
+        // Bottom-left
         [
-            radius * (angle_offset + 1.0 * 2.0 * PI / 3.0).cos(),
-            radius * (angle_offset + 1.0 * 2.0 * PI / 3.0).sin(),
+            -radius * (PI / 3.0).sin(),
+            -radius * (PI / 3.0).cos(),
             0.0,
         ],
+        // Bottom-right
         [
-            radius * (angle_offset + 2.0 * 2.0 * PI / 3.0).cos(),
-            radius * (angle_offset + 2.0 * 2.0 * PI / 3.0).sin(),
+            radius * (PI / 3.0).sin(),
+            -radius * (PI / 3.0).cos(),
             0.0,
         ],
     ];

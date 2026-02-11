@@ -31,7 +31,7 @@ fn main() {
     let max_speed = get_float(physics.get("max_speed").unwrap(), "max_speed");
     let drag = get_float(physics.get("drag").unwrap(), "drag");
     let world_limit = get_float(physics.get("world_limit").unwrap(), "world_limit");
-    let _ship_radius = get_float(gameplay.get("ship_radius").unwrap(), "ship_radius");
+    let ship_radius = get_float(gameplay.get("ship_radius").unwrap(), "ship_radius");
     
     // Generate the constants.rs file
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -50,12 +50,14 @@ pub const ROTATION_SPEED: f32 = {:.1};   // radians/sec
 pub const MAX_SPEED: f32 = {:.1};     // pixels/sec
 pub const DRAG: f32 = {};            // velocity multiplier per frame
 pub const WORLD_LIMIT: f32 = {:.1};    // world boundary for wrapping
+pub const SHIP_RADIUS: f32 = {:.1};    // ship collision radius
 "#,
         thrust_accel,
         rotation_speed,
         max_speed,
         drag,
         world_limit,
+        ship_radius,
     );
     
     fs::write(&dest_path, generated_code)

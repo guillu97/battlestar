@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 mod components;
 mod constants;
+mod domain;
 mod entities;
 mod net;
 mod systems;
@@ -45,7 +46,8 @@ fn build_app() -> App {
                     .after(net::gather_player_input),
                 net::receive_game_state,
                 systems::movement::apply_local_physics
-                    .after(net::gather_player_input),
+                    .after(net::gather_player_input)
+                    .after(net::receive_game_state),  // CRUCIAL: Apply local physics AFTER server updates
                 systems::movement::update_thruster_length
                     .after(systems::movement::apply_local_physics),
                 systems::camera::update_camera
