@@ -42,18 +42,15 @@ impl Game {
         Self {
             ships: HashMap::new(),
             asteroids: vec![
-                Asteroid::new(
-                    1,
-                    Vec2::new(200.0, 100.0),
-                    Vec2::new(20.0, 15.0),
-                    16.0,
-                ),
-                Asteroid::new(
-                    2,
-                    Vec2::new(-150.0, -120.0),
-                    Vec2::new(-10.0, 25.0),
-                    24.0,
-                ),
+                Asteroid::new(1, Vec2::new(200.0, 100.0), Vec2::new(20.0, 15.0), 20.0),
+                Asteroid::new(2, Vec2::new(-150.0, -120.0), Vec2::new(-10.0, 25.0), 24.0),
+                Asteroid::new(3, Vec2::new(500.0, -400.0), Vec2::new(-15.0, 20.0), 18.0),
+                Asteroid::new(4, Vec2::new(-600.0, 300.0), Vec2::new(25.0, -10.0), 22.0),
+                Asteroid::new(5, Vec2::new(100.0, 600.0), Vec2::new(-20.0, -15.0), 16.0),
+                Asteroid::new(6, Vec2::new(400.0, 400.0), Vec2::new(10.0, -25.0), 20.0),
+                Asteroid::new(7, Vec2::new(-500.0, -500.0), Vec2::new(15.0, 15.0), 25.0),
+                Asteroid::new(8, Vec2::new(700.0, -100.0), Vec2::new(-10.0, 20.0), 19.0),
+                Asteroid::new(9, Vec2::new(-300.0, 700.0), Vec2::new(18.0, -12.0), 21.0),
             ],
             tick: 0,
             constants: PhysicsConstants::from_game_constants(
@@ -141,7 +138,15 @@ impl Game {
         }
 
         // Check collisions (ship vs asteroid)
+        // Calculate invincibility threshold (1 second at 20Hz = 20 ticks)
+        let invincibility_ticks = (INVINCIBILITY_DURATION * 20.0) as u64;
+
         for (ship_id, ship) in &mut self.ships {
+            // Skip collision check if ship is invincible
+            if ship.is_invincible(self.tick, invincibility_ticks) {
+                continue;
+            }
+
             for asteroid in &self.asteroids {
                 if check_collision(
                     ship.position,
@@ -150,7 +155,7 @@ impl Game {
                     asteroid.radius,
                 ) {
                     // Ship destroyed - respawn at center
-                    ship.respawn();
+                    ship.respawn(self.tick);
 
                     // Mark ship as needing color in next delta (respawn)
                     self.ships_needing_color.insert(*ship_id);
@@ -182,6 +187,9 @@ impl Game {
 
         let mut delta = DeltaState::new(self.tick, is_full_state);
 
+        // Calculate invincibility threshold
+        let invincibility_ticks = (INVINCIBILITY_DURATION * 20.0) as u64;
+
         // If full state, include asteroids in the GameState
         // (asteroids rarely change, so we only send them on full state)
         if is_full_state {
@@ -193,9 +201,9 @@ impl Game {
         for ship in self.ships.values() {
             let needs_color = self.ships_needing_color.contains(&ship.id) || is_full_state;
             let update = if needs_color {
-                ShipUpdate::with_color(ship)
+                ShipUpdate::with_color(ship, self.tick, invincibility_ticks)
             } else {
-                ShipUpdate::without_color(ship)
+                ShipUpdate::without_color(ship, self.tick, invincibility_ticks)
             };
             delta.add_ship_update(update);
         }
@@ -218,7 +226,7 @@ mod tests {
     fn test_game_creation() {
         let game = Game::new();
         assert_eq!(game.ships.len(), 0);
-        assert_eq!(game.asteroids.len(), 2);
+        assert_eq!(game.asteroids.len(), 9);
         assert_eq!(game.tick, 0);
     }
 

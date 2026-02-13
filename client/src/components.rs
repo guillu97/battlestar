@@ -59,3 +59,9 @@ pub struct NetworkedPlayer {
 pub struct NetworkedAsteroid {
     pub id: u32,
 }
+
+// Invincibility tracking for ships after respawn
+#[derive(Component)]
+pub struct Invincible {
+    pub enabled: bool,
+}

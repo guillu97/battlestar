@@ -41,11 +41,17 @@ pub struct ShipUpdate {
     /// Color only included when ship spawns/respawns
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<crate::entities::Color>,
+
+    /// Invincibility state (only sent when true for bandwidth optimization)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_invincible: Option<bool>,
 }
 
 impl ShipUpdate {
-    /// Create update from ship (include color for spawns)
-    pub fn from_ship(ship: &Ship, include_color: bool) -> Self {
+    /// Create update from ship (include color for spawns, check invincibility)
+    pub fn from_ship(ship: &Ship, include_color: bool, current_tick: u64, invincibility_ticks: u64) -> Self {
+        let is_invincible = ship.is_invincible(current_tick, invincibility_ticks);
+
         Self {
             id: ship.id,
             position: ship.position,
@@ -56,17 +62,18 @@ impl ShipUpdate {
             } else {
                 None
             },
+            is_invincible: if is_invincible { Some(true) } else { None },
         }
     }
 
     /// Create update with color (for spawns/respawns)
-    pub fn with_color(ship: &Ship) -> Self {
-        Self::from_ship(ship, true)
+    pub fn with_color(ship: &Ship, current_tick: u64, invincibility_ticks: u64) -> Self {
+        Self::from_ship(ship, true, current_tick, invincibility_ticks)
     }
 
     /// Create update without color (for regular movement)
-    pub fn without_color(ship: &Ship) -> Self {
-        Self::from_ship(ship, false)
+    pub fn without_color(ship: &Ship, current_tick: u64, invincibility_ticks: u64) -> Self {
+        Self::from_ship(ship, false, current_tick, invincibility_ticks)
     }
 }
 
@@ -117,7 +124,7 @@ mod tests {
     #[test]
     fn test_ship_update_with_color() {
         let ship = create_test_ship(1);
-        let update = ShipUpdate::with_color(&ship);
+        let update = ShipUpdate::with_color(&ship, 0, 20);
 
         assert_eq!(update.id, 1);
         assert!(update.color.is_some());
@@ -127,7 +134,7 @@ mod tests {
     #[test]
     fn test_ship_update_without_color() {
         let ship = create_test_ship(1);
-        let update = ShipUpdate::without_color(&ship);
+        let update = ShipUpdate::without_color(&ship, 0, 20);
 
         assert_eq!(update.id, 1);
         assert!(update.color.is_none());
@@ -138,7 +145,7 @@ mod tests {
         let mut delta = DeltaState::new(1, false);
         let ship = create_test_ship(1);
 
-        delta.add_ship_update(ShipUpdate::with_color(&ship));
+        delta.add_ship_update(ShipUpdate::with_color(&ship, 0, 20));
 
         assert!(delta.has_changes());
         assert_eq!(delta.changed_ships.len(), 1);

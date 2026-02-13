@@ -1,7 +1,7 @@
 use battlestar_shared::{Color as NetColor, ServerMessage};
 use bevy::prelude::*;
 
-use crate::components::{NetworkedAsteroid, NetworkedPlayer};
+use crate::components::{NetworkedAsteroid, NetworkedPlayer, Invincible};
 use crate::domain;
 
 use super::transport::NetworkClient;
@@ -22,15 +22,15 @@ pub fn receive_game_state(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut existing_ships: Query<
-        (Entity, &NetworkedPlayer, &mut Transform, &mut crate::components::Velocity),
+        (Entity, &NetworkedPlayer, &mut Transform, &mut crate::components::Velocity, &mut Invincible),
         Without<crate::components::Player>,
     >,
     mut local_player: Query<
-        (&mut Transform, &mut crate::components::Velocity),
+        (&mut Transform, &mut crate::components::Velocity, &mut Invincible),
         With<crate::components::Player>,
     >,
     mut existing_asteroids: Query<
-        (Entity, &NetworkedAsteroid, &mut Transform),
+        (Entity, &NetworkedAsteroid, &mut Transform, &mut crate::components::Velocity),
         (Without<NetworkedPlayer>, Without<crate::components::Player>),
     >,
 ) {
@@ -74,12 +74,15 @@ pub fn receive_game_state(
                                 player_color.color = Some(color);
                             }
 
-                            if let Some((mut transform, mut velocity)) = local_player.iter_mut().next() {
+                            if let Some((mut transform, mut velocity, mut invincible)) = local_player.iter_mut().next() {
                                 let server_pos = Vec3::new(
                                     ship_update.position.x,
                                     ship_update.position.y,
                                     0.0,
                                 );
+
+                                // Update invincibility state
+                                invincible.enabled = ship_update.is_invincible.unwrap_or(false);
 
                                 // If far from server (collision/respawn), snap immediately
                                 // Otherwise smooth correction to avoid jitter with prediction
@@ -104,8 +107,11 @@ pub fn receive_game_state(
 
                         // Find or create the ship entity for other players
                         let mut found = false;
-                        for (_entity, networked, mut transform, mut velocity) in existing_ships.iter_mut() {
+                        for (_entity, networked, mut transform, mut velocity, mut invincible) in existing_ships.iter_mut() {
                             if networked.id == ship_update.id {
+                                // Update invincibility state
+                                invincible.enabled = ship_update.is_invincible.unwrap_or(false);
+
                                 // Interpolate other players for smooth network updates
                                 let blend = 0.3;
                                 transform.translation.x += (ship_update.position.x - transform.translation.x) * blend;
@@ -140,7 +146,7 @@ pub fn receive_game_state(
 
                     // Remove ships that were explicitly removed
                     for removed_id in delta_state.removed_ship_ids {
-                        for (entity, networked, _, _) in existing_ships.iter() {
+                        for (entity, networked, _, _, _) in existing_ships.iter() {
                             if networked.id == removed_id {
                                 commands.entity(entity).despawn();
                                 break;
@@ -150,7 +156,7 @@ pub fn receive_game_state(
 
                     // If full state delta, remove ships not in update
                     if let Some(seen_ids) = seen_ids {
-                        for (entity, networked, _, _) in existing_ships.iter() {
+                        for (entity, networked, _, _, _) in existing_ships.iter() {
                             if !seen_ids.contains(&networked.id) {
                                 commands.entity(entity).despawn();
                             }
@@ -168,12 +174,15 @@ pub fn receive_game_state(
                         if server_ship.id == client.player_id {
                             player_color.color = Some(server_ship.color);
 
-                            if let Some((mut transform, mut velocity)) = local_player.iter_mut().next() {
+                            if let Some((mut transform, mut velocity, mut invincible)) = local_player.iter_mut().next() {
                                 let server_pos = Vec3::new(
                                     server_ship.position.x,
                                     server_ship.position.y,
                                     0.0,
                                 );
+
+                                // Default to not invincible for GameState (no field in Ship)
+                                invincible.enabled = false;
 
                                 // If far from server (collision/respawn), snap immediately
                                 // Otherwise smooth correction to avoid jitter with prediction
@@ -198,8 +207,11 @@ pub fn receive_game_state(
 
                         // Find or create the ship entity for other players
                         let mut found = false;
-                        for (_entity, networked, mut transform, mut velocity) in existing_ships.iter_mut() {
+                        for (_entity, networked, mut transform, mut velocity, mut invincible) in existing_ships.iter_mut() {
                             if networked.id == server_ship.id {
+                                // Default to not invincible for GameState
+                                invincible.enabled = false;
+
                                 // Interpolate other players for smooth network updates
                                 let blend = 0.3; // Slightly lower for remote players to reduce jitter
                                 transform.translation.x += (server_ship.position.x - transform.translation.x) * blend;
@@ -231,7 +243,7 @@ pub fn receive_game_state(
                     }
 
                     // Remove ships that no longer exist (despawn will handle children)
-                    for (entity, networked, _, _) in existing_ships.iter() {
+                    for (entity, networked, _, _, _) in existing_ships.iter() {
                         if !seen_ids.contains(&networked.id) {
                             commands.entity(entity).despawn();
                         }
@@ -244,11 +256,16 @@ pub fn receive_game_state(
 
                         // Find or create asteroid entity
                         let mut found = false;
-                        for (_entity, networked, mut transform) in existing_asteroids.iter_mut() {
+                        for (_entity, networked, mut transform, mut velocity) in existing_asteroids.iter_mut() {
                             if networked.id == server_asteroid.id {
-                                // Update position with server authority
+                                // Update position with server authority (periodic corrections)
                                 transform.translation.x = server_asteroid.position.x;
                                 transform.translation.y = server_asteroid.position.y;
+
+                                // Update velocity for client-side prediction
+                                velocity.0.x = server_asteroid.velocity.x;
+                                velocity.0.y = server_asteroid.velocity.y;
+
                                 found = true;
                                 break;
                             }
@@ -268,7 +285,7 @@ pub fn receive_game_state(
                     }
 
                     // Remove asteroids that no longer exist
-                    for (entity, networked, _) in existing_asteroids.iter() {
+                    for (entity, networked, _, _) in existing_asteroids.iter() {
                         if !seen_asteroid_ids.contains(&networked.id) {
                             commands.entity(entity).despawn();
                         }
@@ -327,6 +344,7 @@ pub fn update_local_ship_color(
                 Ship,
                 Player,
                 Velocity(vel),
+                Invincible { enabled: false },
             ))
             .id();
 
@@ -373,6 +391,7 @@ fn spawn_networked_ship(
             Transform::from_translation(position),
             NetworkedPlayer { id },
             Velocity::default(),
+            Invincible { enabled: false },
         ))
         .id();
 
@@ -402,10 +421,12 @@ fn spawn_networked_asteroid(
     position: Vec3,
     radius: f32,
 ) {
+    use crate::components::Velocity;
     commands.spawn((
         Mesh2d(meshes.add(crate::entities::build_circle_mesh(radius, 32))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 0.5)))),
         Transform::from_translation(position),
         NetworkedAsteroid { id },
+        Velocity::default(),
     ));
 }

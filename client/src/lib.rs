@@ -48,11 +48,13 @@ fn build_app() -> App {
                 systems::movement::apply_local_physics
                     .after(net::gather_player_input)
                     .after(net::receive_game_state),  // CRUCIAL: Apply local physics AFTER server updates
+                systems::movement::update_asteroids,  // Update asteroid positions locally
                 systems::movement::update_thruster_length
                     .after(systems::movement::apply_local_physics),
                 systems::camera::update_camera
                     .after(systems::movement::apply_local_physics),
                 net::update_local_ship_color,
+                systems::invincibility::blink_invincible_ships,  // Blink effect for invincible ships
             ),
         )
         .insert_resource(net::PlayerInput::default())

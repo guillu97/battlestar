@@ -11,6 +11,11 @@ pub struct Ship {
     pub velocity: Vec2,
     pub rotation: f32,
     pub color: Color,
+
+    /// Tick when ship last respawned (for invincibility tracking)
+    /// None = never respawned or invincibility expired
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub respawn_tick: Option<u64>,
 }
 
 impl Ship {
@@ -21,6 +26,7 @@ impl Ship {
             velocity: Vec2::ZERO,
             rotation: 0.0,
             color,
+            respawn_tick: None,
         }
     }
 
@@ -58,10 +64,20 @@ impl Ship {
     }
 
     /// Respawn ship at origin (used after collision/death)
-    pub fn respawn(&mut self) {
+    pub fn respawn(&mut self, current_tick: u64) {
         self.position = Vec2::ZERO;
         self.velocity = Vec2::ZERO;
         self.rotation = 0.0;
+        self.respawn_tick = Some(current_tick);
+    }
+
+    /// Check if ship is invincible (recently respawned)
+    pub fn is_invincible(&self, current_tick: u64, invincibility_ticks: u64) -> bool {
+        if let Some(respawn_tick) = self.respawn_tick {
+            current_tick - respawn_tick < invincibility_ticks
+        } else {
+            false
+        }
     }
 }
 
@@ -120,10 +136,28 @@ mod tests {
         ship.velocity = Vec2::new(50.0, 50.0);
         ship.rotation = 1.5;
 
-        ship.respawn();
+        ship.respawn(10);
 
         assert_eq!(ship.position, Vec2::ZERO);
         assert_eq!(ship.velocity, Vec2::ZERO);
         assert_eq!(ship.rotation, 0.0);
+        assert_eq!(ship.respawn_tick, Some(10));
+    }
+
+    #[test]
+    fn test_ship_invincibility_tracking() {
+        let mut ship = Ship::new(1, Color::RED);
+
+        // Ship not invincible initially
+        assert!(!ship.is_invincible(0, 20));
+
+        // Respawn at tick 10
+        ship.respawn(10);
+
+        // Should be invincible for 20 ticks after respawn
+        assert!(ship.is_invincible(15, 20), "Should be invincible at tick 15");
+        assert!(ship.is_invincible(29, 20), "Should be invincible at tick 29");
+        assert!(!ship.is_invincible(30, 20), "Should NOT be invincible at tick 30");
+        assert!(!ship.is_invincible(50, 20), "Should NOT be invincible at tick 50");
     }
 }
