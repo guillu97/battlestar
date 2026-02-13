@@ -1,5 +1,5 @@
 use battlestar_shared::{physics, Input, PhysicsConstants, Vec2};
-use crate::components::{Player, Thruster, ThrusterOwner, Velocity};
+use crate::components::{Player, Thruster, ThrusterOwner, Velocity, NetworkedAsteroid};
 use crate::constants::*;
 use bevy::prelude::*;
 
@@ -80,5 +80,33 @@ pub fn update_thruster_length(
         let length = (thruster.base_length + speed * thruster.speed_factor)
             .min(thruster.max_length);
         transform.scale.y = length / thruster.base_length;
+    }
+}
+
+/// Update asteroid positions locally based on their velocity
+/// Server will periodically correct positions in GameState (every 5 seconds)
+pub fn update_asteroids(
+    mut asteroids: Query<(&mut Transform, &Velocity), With<NetworkedAsteroid>>,
+    time: Res<Time>,
+) {
+    let dt = time.delta().as_secs_f32();
+
+    for (mut transform, velocity) in &mut asteroids {
+        // Update position based on velocity
+        transform.translation.x += velocity.0.x * dt;
+        transform.translation.y += velocity.0.y * dt;
+
+        // Wrap around world boundaries (toroidal world)
+        if transform.translation.x > WORLD_LIMIT {
+            transform.translation.x = -WORLD_LIMIT;
+        } else if transform.translation.x < -WORLD_LIMIT {
+            transform.translation.x = WORLD_LIMIT;
+        }
+
+        if transform.translation.y > WORLD_LIMIT {
+            transform.translation.y = -WORLD_LIMIT;
+        } else if transform.translation.y < -WORLD_LIMIT {
+            transform.translation.y = WORLD_LIMIT;
+        }
     }
 }

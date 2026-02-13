@@ -21,10 +21,15 @@ pub fn blink_invincible_ships(
                 // Oscillate between 0.3 and 1.0 opacity for a smooth pulsing effect
                 let opacity = 0.3 + 0.7 * (phase.sin() * 0.5 + 0.5);
 
-                material.color.set_alpha(opacity);
+                // Preserve the original color but change alpha
+                let mut color = material.color;
+                color.set_alpha(opacity);
+                material.color = color;
             } else {
                 // Not invincible - ensure full opacity
-                material.color.set_alpha(1.0);
+                let mut color = material.color;
+                color.set_alpha(1.0);
+                material.color = color;
             }
         }
     }

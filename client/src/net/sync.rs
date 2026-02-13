@@ -30,7 +30,7 @@ pub fn receive_game_state(
         With<crate::components::Player>,
     >,
     mut existing_asteroids: Query<
-        (Entity, &NetworkedAsteroid, &mut Transform),
+        (Entity, &NetworkedAsteroid, &mut Transform, &mut crate::components::Velocity),
         (Without<NetworkedPlayer>, Without<crate::components::Player>),
     >,
 ) {
@@ -256,11 +256,16 @@ pub fn receive_game_state(
 
                         // Find or create asteroid entity
                         let mut found = false;
-                        for (_entity, networked, mut transform) in existing_asteroids.iter_mut() {
+                        for (_entity, networked, mut transform, mut velocity) in existing_asteroids.iter_mut() {
                             if networked.id == server_asteroid.id {
-                                // Update position with server authority
+                                // Update position with server authority (periodic corrections)
                                 transform.translation.x = server_asteroid.position.x;
                                 transform.translation.y = server_asteroid.position.y;
+
+                                // Update velocity for client-side prediction
+                                velocity.0.x = server_asteroid.velocity.x;
+                                velocity.0.y = server_asteroid.velocity.y;
+
                                 found = true;
                                 break;
                             }
@@ -280,7 +285,7 @@ pub fn receive_game_state(
                     }
 
                     // Remove asteroids that no longer exist
-                    for (entity, networked, _) in existing_asteroids.iter() {
+                    for (entity, networked, _, _) in existing_asteroids.iter() {
                         if !seen_asteroid_ids.contains(&networked.id) {
                             commands.entity(entity).despawn();
                         }
@@ -416,10 +421,12 @@ fn spawn_networked_asteroid(
     position: Vec3,
     radius: f32,
 ) {
+    use crate::components::Velocity;
     commands.spawn((
         Mesh2d(meshes.add(crate::entities::build_circle_mesh(radius, 32))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 0.5)))),
         Transform::from_translation(position),
         NetworkedAsteroid { id },
+        Velocity::default(),
     ));
 }

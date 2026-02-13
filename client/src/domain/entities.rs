@@ -122,6 +122,7 @@ pub fn spawn_networked_asteroid(
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 0.5)))),
             Transform::from_translation(position),
             NetworkedAsteroid { id },
+            Velocity::default(),
         ))
         .id()
 }
