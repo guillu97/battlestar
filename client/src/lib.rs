@@ -53,6 +53,7 @@ fn build_app() -> App {
                 systems::camera::update_camera
                     .after(systems::movement::apply_local_physics),
                 net::update_local_ship_color,
+                systems::invincibility::blink_invincible_ships,  // Blink effect for invincible ships
             ),
         )
         .insert_resource(net::PlayerInput::default())

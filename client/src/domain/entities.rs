@@ -1,6 +1,6 @@
 use battlestar_shared::Color as NetColor;
 use bevy::prelude::*;
-use crate::components::{NetworkedPlayer, NetworkedAsteroid, Player, Ship, Velocity, Thruster, ThrusterOwner};
+use crate::components::{NetworkedPlayer, NetworkedAsteroid, Player, Ship, Velocity, Thruster, ThrusterOwner, Invincible};
 use crate::entities::{build_triangle_mesh, build_thruster_mesh, build_circle_mesh};
 
 /// Spawn a player's local ship
@@ -18,6 +18,7 @@ pub fn spawn_local_ship(
             Ship,
             Player,
             Velocity::default(),
+            Invincible { enabled: false },
         ))
         .id();
 
@@ -46,6 +47,7 @@ pub fn spawn_local_ship_with_color(
             Ship,
             Player,
             Velocity(velocity),
+            Invincible { enabled: false },
         ))
         .id();
 
@@ -72,6 +74,7 @@ pub fn spawn_networked_ship(
             Transform::from_translation(position),
             NetworkedPlayer { id },
             Velocity::default(),
+            Invincible { enabled: false },
         ))
         .id();
 

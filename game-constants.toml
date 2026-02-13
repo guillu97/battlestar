@@ -9,4 +9,5 @@ drag = 0.95               # velocity multiplier per frame
 world_limit = 2000.0      # world boundary for wrapping
 
 [gameplay]
-ship_radius = 25.0        # pixels
+ship_radius = 25.0              # pixels
+invincibility_duration = 1.0    # seconds after respawn

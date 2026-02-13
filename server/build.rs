@@ -39,6 +39,7 @@ fn main() {
     let drag = get_float(physics.get("drag").unwrap(), "drag");
     let world_limit = get_float(physics.get("world_limit").unwrap(), "world_limit");
     let ship_radius = get_float(gameplay.get("ship_radius").unwrap(), "ship_radius");
+    let invincibility_duration = get_float(gameplay.get("invincibility_duration").unwrap(), "invincibility_duration");
     
     // Generate the constants.rs file
     let out_dir = env::var("OUT_DIR").unwrap();
@@ -54,6 +55,7 @@ pub const MAX_SPEED: f32 = {:.1};     // pixels/sec
 pub const DRAG: f32 = {};            // velocity multiplier per frame
 pub const SHIP_RADIUS: f32 = {:.1};     // pixels
 pub const WORLD_LIMIT: f32 = {:.1};    // world boundary for wrapping
+pub const INVINCIBILITY_DURATION: f32 = {:.1};  // seconds after respawn
 "#,
         thrust_accel,
         rotation_speed,
@@ -61,6 +63,7 @@ pub const WORLD_LIMIT: f32 = {:.1};    // world boundary for wrapping
         drag,
         ship_radius,
         world_limit,
+        invincibility_duration,
     );
     
     fs::write(&dest_path, generated_code)
